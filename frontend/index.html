@@ -12,26 +12,30 @@
 </head>
 <body class="editorial-body">
 
-  <!-- Subtle Studio Light Refractions (Warm neutral ambient) -->
+  <!-- Subtle Studio Light Refractions (Metallic Pearlescent & Cool Silver) -->
   <div class="studio-light studio-light-1"></div>
   <div class="studio-light studio-light-2"></div>
 
   <!-- Rich, Dreamy Ambient Musical Universe (Visible, Non-interactive) -->
   <div class="ambient-celestial-canvas" aria-hidden="true">
-    <!-- Crisp Luminous 4-Point Star Glints & Sparkles (30+) -->
+    <!-- Large, Luminous 4-Point Star Glints (12px–24px) -->
     <span class="star-glint sg-1">✦</span>
-    <span class="star-glint sg-2">✦</span>
+    <span class="star-glint sg-2">✧</span>
     <span class="star-glint sg-3">✦</span>
-    <span class="star-glint sg-4">✦</span>
+    <span class="star-glint sg-4">✧</span>
     <span class="star-glint sg-5">✦</span>
     <span class="star-glint sg-6">✦</span>
-    <span class="star-glint sg-7">✦</span>
+    <span class="star-glint sg-7">✧</span>
     <span class="star-glint sg-8">✦</span>
-    <span class="star-glint sg-9">✦</span>
+    <span class="star-glint sg-9">✧</span>
     <span class="star-glint sg-10">✦</span>
-    <span class="star-glint sg-11">✦</span>
+    <span class="star-glint sg-11">✧</span>
     <span class="star-glint sg-12">✦</span>
+    <span class="star-glint sg-13">✦</span>
+    <span class="star-glint sg-14">✧</span>
+    <span class="star-glint sg-15">✦</span>
 
+    <!-- Luminous Radial Sparkle Nodes (6px–12px with bloom) -->
     <span class="sparkle sp-1"></span>
     <span class="sparkle sp-2"></span>
     <span class="sparkle sp-3"></span>
@@ -146,13 +150,13 @@
     <!-- 1. CLOSED STATE: Iconic Retro Silver Metallic MP3 Player          -->
     <!-- ================================================================= -->
     <section class="closed-state-container" id="closed-container">
-      <div class="retro-mp3-device" id="closed-mp3-object" role="button" tabindex="0" onclick="window.openSpatialArena()" title="Click to enter player">
+      <div class="retro-mp3-device" id="closed-mp3-object">
         <!-- Brushed metallic reflection & highlight sheen -->
         <div class="device-metal-sheen"></div>
         <div class="device-bevel-edge"></div>
 
-        <!-- Top Half: Inset Dark LCD Screen -->
-        <div class="retro-lcd-screen">
+        <!-- Top Half: Inset Dark LCD Screen (Clicking screen enters player) -->
+        <div class="retro-lcd-screen" onclick="window.openSpatialArena()" title="Click screen to enter player">
           <!-- Screen Header: Status Bar -->
           <div class="lcd-status-row">
             <div class="lcd-playing-indicator">
@@ -195,35 +199,38 @@
 
         <!-- Bottom Half: Tactile Click-Wheel -->
         <div class="retro-clickwheel" id="retro-clickwheel">
-          <!-- Top Menu Button with inviting glowing pulse -->
-          <span class="wheel-label wheel-top pulse-menu" title="Click to enter player">MENU</span>
-          <!-- Left Prev Button -->
-          <span class="wheel-icon wheel-left">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <!-- Top Menu Button: Enters player -->
+          <span class="wheel-label wheel-top pulse-menu" onclick="event.stopPropagation(); window.openSpatialArena();" title="Click MENU to enter player">MENU</span>
+
+          <!-- Left Prev Button: Switches previous track on LCD only (e.stopPropagation()) -->
+          <button class="wheel-icon wheel-left" onclick="window.closedPrev(event);" title="Previous Track on LCD" aria-label="Previous Track">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="19 20 9 12 19 4 19 20"></polygon>
               <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5"></line>
             </svg>
-          </span>
-          <!-- Right Next Button -->
-          <span class="wheel-icon wheel-right">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          </button>
+
+          <!-- Right Next Button: Switches next track on LCD only (e.stopPropagation()) -->
+          <button class="wheel-icon wheel-right" onclick="window.closedNext(event);" title="Next Track on LCD" aria-label="Next Track">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 4 15 12 5 20 5 4"></polygon>
               <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5"></line>
             </svg>
-          </span>
-          <!-- Bottom Play/Pause Button -->
-          <span class="wheel-icon wheel-bottom">
-            <svg id="trigger-play-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          </button>
+
+          <!-- Bottom Play/Pause Button: Toggles playback on LCD only (e.stopPropagation()) -->
+          <button class="wheel-icon wheel-bottom" onclick="window.closedTogglePlay(event);" title="Play or Pause on LCD" aria-label="Play or Pause">
+            <svg id="trigger-play-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            <svg id="trigger-pause-icon" class="hidden" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <svg id="trigger-pause-icon" class="hidden" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="4" width="4" height="16"></rect>
               <rect x="14" y="4" width="4" height="16"></rect>
             </svg>
-          </span>
+          </button>
 
-          <!-- Center Tactile Circular Button -->
-          <div class="wheel-center-button" title="Enter player">
+          <!-- Center Tactile Circular Button: Enters player -->
+          <div class="wheel-center-button" onclick="event.stopPropagation(); window.openSpatialArena();" title="Enter player">
             <div class="wheel-center-core"></div>
           </div>
         </div>

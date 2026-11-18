@@ -140,6 +140,38 @@ function renderClosedArtifact() {
   if (dom.closedTrackTitle) dom.closedTrackTitle.textContent = current.title;
   if (dom.closedTrackArtist) dom.closedTrackArtist.textContent = current.artist;
   updatePlayStateUI();
+  updateTimelineDisplays();
+}
+
+/**
+ * Click-Wheel Closed Controls (Prev / Next / Play-Pause with event.stopPropagation())
+ * Ensures clicking |<<, >>|, or >|| updates LCD playback WITHOUT opening spatial cards.
+ */
+function closedPrev(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  prevTrack();
+  renderClosedArtifact();
+}
+
+function closedNext(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  nextTrack();
+  renderClosedArtifact();
+}
+
+function closedTogglePlay(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  togglePlay();
+  renderClosedArtifact();
 }
 
 function openSpatialArena() {
@@ -620,6 +652,26 @@ function updatePlayStateUI() {
   if (dom.triggerPlayIcon) dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
   if (dom.triggerPauseIcon) dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
 
+  // Sync retro MP3 LCD screen glyph & playback indicator
+  const lcdGlyph = document.querySelector('.lcd-play-glyph');
+  const lcdText = document.querySelector('.lcd-playing-indicator span:last-child');
+  if (lcdGlyph) {
+    lcdGlyph.textContent = state.isPlaying ? '▶' : '❚❚';
+    lcdGlyph.style.color = state.isPlaying ? '#60a5fa' : '#9499a6';
+  }
+  if (lcdText) {
+    lcdText.textContent = state.isPlaying ? 'Now playing' : 'Paused';
+  }
+
+  const lcdProgressFill = document.querySelector('.lcd-progress-fill');
+  if (lcdProgressFill) {
+    if (state.isPlaying) {
+      lcdProgressFill.classList.add('is-animating');
+    } else {
+      lcdProgressFill.classList.remove('is-animating');
+    }
+  }
+
   document.querySelectorAll('.glass-track-card').forEach((card) => {
     const idx = parseInt(card.dataset.index, 10);
     const playIcon = card.querySelector('.icon-play');
@@ -640,6 +692,20 @@ function updateTimelineDisplays() {
   const pct = (state.progressSeconds / state.trackDuration) * 100;
   const fillEl = document.getElementById(`timeline-fill-${state.activeIndex}`);
   if (fillEl) fillEl.style.width = `${pct}%`;
+
+  // Sync retro MP3 LCD screen progress fill & times
+  const lcdFill = document.querySelector('.lcd-progress-fill');
+  if (lcdFill) lcdFill.style.width = `${pct}%`;
+
+  const lcdTimeReadout = document.querySelector('.lcd-time-readout');
+  if (lcdTimeReadout) {
+    const mins = Math.floor(state.progressSeconds / 60);
+    const secs = String(state.progressSeconds % 60).padStart(2, '0');
+    const rem = Math.max(0, state.trackDuration - state.progressSeconds);
+    const remMins = Math.floor(rem / 60);
+    const remSecs = String(rem % 60).padStart(2, '0');
+    lcdTimeReadout.innerHTML = `<span>${mins}:${secs}</span><span>-${remMins}:${remSecs}</span>`;
+  }
 }
 
 function startGentleSynth() {
@@ -730,6 +796,9 @@ function escapeHtml(str) {
 window.loadRecentTracks = loadRecentTracks;
 window.openSpatialArena = openSpatialArena;
 window.closeSpatialArena = closeSpatialArena;
+window.closedPrev = closedPrev;
+window.closedNext = closedNext;
+window.closedTogglePlay = closedTogglePlay;
 window.toggleCardPlay = toggleCardPlay;
 window.nextTrack = nextTrack;
 window.prevTrack = prevTrack;
