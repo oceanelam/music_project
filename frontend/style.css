@@ -2,7 +2,7 @@
    EDITORIAL SPATIAL GLASS MUSIC EXPERIENCE
    Art-directed minimalist fashion lookbook aesthetic:
    Studio warm-grey/off-white lighting, smoked frosted acrylic glass,
-   subtle depth and organic floating cards.
+   continuous 3D spatial carousel, and tactile physics.
    ========================================================================== */
 
 :root {
@@ -43,14 +43,17 @@
   padding: 0;
 }
 
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; /* Strict: Never show page scrollbars */
+}
+
 body.editorial-body {
   font-family: var(--font-editorial);
   background: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-dark);
-  min-height: 100vh;
-  width: 100vw;
-  overflow-x: hidden;
   position: relative;
   display: flex;
   align-items: center;
@@ -104,7 +107,7 @@ body.editorial-body {
 
 .watermark-title {
   font-family: var(--font-mono);
-  font-size: clamp(3rem, 9.5vw, 9.5rem);
+  font-size: clamp(2.5rem, 8vw, 8.5rem);
   font-weight: 300;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -114,10 +117,10 @@ body.editorial-body {
 }
 
 .watermark-sub {
-  font-size: 0.78rem;
-  letter-spacing: 0.3em;
+  font-size: 0.76rem;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(28, 28, 26, 0.18);
+  color: rgba(28, 28, 26, 0.2);
   font-weight: 500;
   margin-top: 14px;
 }
@@ -125,10 +128,10 @@ body.editorial-body {
 /* Discrete Floating Minimal Close Button */
 .editorial-close-btn {
   position: fixed;
-  top: 36px;
-  right: 42px;
+  top: 32px;
+  right: 36px;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.7);
@@ -156,7 +159,7 @@ body.editorial-body {
 /* Quiet Fallback Notification */
 .editorial-notice {
   position: fixed;
-  top: 36px;
+  top: 32px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.65);
@@ -185,13 +188,13 @@ body.editorial-body {
 /* Main Spatial Canvas */
 .spatial-canvas {
   position: relative;
-  width: 100%;
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  perspective: 1600px;
 }
 
 /* ==========================================================================
@@ -351,16 +354,26 @@ body.editorial-body {
 }
 
 /* ==========================================================================
-   2. OPENED STATE: ORGANIC FLOATING FROSTED-GLASS CARDS
+   2. OPENED STATE: ORGANIC FLOATING FROSTED-GLASS SPATIAL CAROUSEL
    ========================================================================== */
 .opened-state-container {
-  width: 100%;
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px 40px;
-  animation: expandArena 0.7s var(--ease-spring) forwards;
+  animation: expandArena 0.6s var(--ease-spring) forwards;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.opened-state-container.is-grabbing {
+  cursor: grabbing;
 }
 
 @keyframes expandArena {
@@ -370,20 +383,27 @@ body.editorial-body {
 
 .organic-spatial-field {
   position: relative;
-  width: 100%;
-  max-width: 1400px;
-  height: 720px;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  perspective: 1400px;
   transform-style: preserve-3d;
 }
 
 /* ==========================================================================
    FROSTED ACRYLIC TRACK CARD
+   Centered at (top: 50%, left: 50%) and transformed dynamically in 3D
    ========================================================================== */
 .glass-track-card {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  margin-top: -230px;
+  margin-left: -160px;
   background: var(--glass-card-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -393,42 +413,32 @@ body.editorial-body {
   padding: 20px 20px 18px;
   user-select: none;
   cursor: pointer;
-  transform-style: preserve-3d;
   will-change: transform, opacity, filter;
-  transition: transform 0.7s var(--ease-spring),
-              opacity 0.6s var(--ease-spring),
-              filter 0.6s var(--ease-spring),
-              box-shadow 0.4s var(--ease-spring),
-              background 0.4s var(--ease-spring);
+  transform-origin: center center;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.45s ease,
+              filter 0.45s ease,
+              box-shadow 0.35s ease,
+              background 0.35s ease;
 }
 
-/* Organic Floating Delays */
-@keyframes cardDrift {
-  0% { transform: translate3d(var(--tx), var(--ty), var(--tz)) rotate(var(--rot)) scale(var(--sc)); }
-  50% { transform: translate3d(var(--tx), calc(var(--ty) - 10px), var(--tz)) rotate(calc(var(--rot) + 0.3deg)) scale(var(--sc)); }
-  100% { transform: translate3d(var(--tx), var(--ty), var(--tz)) rotate(var(--rot)) scale(var(--sc)); }
+/* Disable transition while dragging for 1:1 tactile tracking */
+.glass-track-card.is-dragging {
+  transition: none !important;
 }
 
-.glass-track-card.drifting {
-  animation: cardDrift 8s ease-in-out infinite alternate;
-}
-
-/* Active Foreground Card */
+/* Active Foreground Centered Card */
 .glass-track-card.is-active {
-  z-index: 50 !important;
-  opacity: 1 !important;
-  filter: blur(0px) !important;
   background: var(--glass-card-bg-active);
   border: var(--glass-card-border-active);
   box-shadow: var(--glass-shadow-active);
   cursor: default;
 }
 
-/* Inactive Card hover */
+/* Hover on inactive floating cards */
 .glass-track-card:not(.is-active):hover {
-  opacity: 0.95 !important;
-  filter: blur(0px) !important;
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 28px 55px -10px rgba(0, 0, 0, 0.08);
 }
 
 /* Inside the Card: Clean square artwork */
@@ -447,11 +457,7 @@ body.editorial-body {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.6s var(--ease-spring);
-}
-
-.glass-track-card:hover .card-artwork-img {
-  transform: scale(1.03);
+  pointer-events: none;
 }
 
 /* Clean Typography */
@@ -649,114 +655,28 @@ body.editorial-body {
 }
 
 /* ==========================================================================
-   RESPONSIVE DESIGN (DESKTOP TO MOBILE)
+   MOBILE SCREEN TUNING
    ========================================================================== */
-@media (min-width: 901px) {
-  /* Spatial Depth Classes for 6 Tracks */
-  /* Left Foreground Hero */
-  .pos-fg-left {
-    width: 320px;
-    --tx: -340px;
-    --ty: -15px;
-    --tz: 50px;
-    --rot: -2deg;
-    --sc: 1.04;
-    z-index: 30;
-  }
-
-  /* Right Foreground Hero */
-  .pos-fg-right {
-    width: 320px;
-    --tx: 340px;
-    --ty: 25px;
-    --tz: 50px;
-    --rot: 2deg;
-    --sc: 1.04;
-    z-index: 30;
-  }
-
-  /* Background Drifting Cards (High, Low, Flanks) */
-  .pos-bg-top {
-    width: 270px;
-    --tx: -40px;
-    --ty: -190px;
-    --tz: -60px;
-    --rot: -1deg;
-    --sc: 0.86;
-    opacity: 0.82;
-    filter: blur(0.6px);
-    z-index: 15;
-  }
-
-  .pos-bg-bottom {
-    width: 270px;
-    --tx: 50px;
-    --ty: 195px;
-    --tz: -60px;
-    --rot: 1.5deg;
-    --sc: 0.86;
-    opacity: 0.82;
-    filter: blur(0.6px);
-    z-index: 15;
-  }
-
-  .pos-bg-far-left {
-    width: 245px;
-    --tx: -640px;
-    --ty: 40px;
-    --tz: -130px;
-    --rot: -4deg;
-    --sc: 0.76;
-    opacity: 0.65;
-    filter: blur(1.5px);
-    z-index: 10;
-  }
-
-  .pos-bg-far-right {
-    width: 245px;
-    --tx: 640px;
-    --ty: -50px;
-    --tz: -130px;
-    --rot: 3.5deg;
-    --sc: 0.76;
-    opacity: 0.65;
-    filter: blur(1.5px);
-    z-index: 10;
-  }
-}
-
-/* Mobile & Tablet Screen Adaptations */
-@media (max-width: 900px) {
-  .opened-state-container {
-    padding: 80px 20px 40px;
-    min-height: auto;
-  }
-
-  .organic-spatial-field {
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 28px;
-    transform: none !important;
-  }
-
-  .glass-track-card {
-    position: relative !important;
-    width: 100% !important;
-    max-width: 320px !important;
-    transform: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-    animation: none !important;
-  }
-
+@media (max-width: 768px) {
   .editorial-close-btn {
     top: 20px;
     right: 20px;
+    padding: 6px 14px;
+    font-size: 0.68rem;
   }
 
-  .editorial-watermark {
-    display: none;
+  .watermark-title {
+    font-size: 3rem;
+  }
+
+  .watermark-sub {
+    font-size: 0.68rem;
+  }
+
+  .glass-track-card {
+    width: 280px;
+    margin-top: -210px;
+    margin-left: -140px;
+    padding: 16px 16px 14px;
   }
 }
