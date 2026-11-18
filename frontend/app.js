@@ -15,9 +15,12 @@ const state = {
   activeIndex: 0,
   isOpened: false,
   isPlaying: false,
-  progressSeconds: 30,
-  trackDuration: 210,
-  likedTrackIds: new Set(),
+  progressSeconds: 0,
+  trackDuration: 30,
+  likedTracks: new Map(), // id -> track object
+  audioEl: null,
+  currentAudioTrackId: null,
+  isAudioLoading: false,
   audioCtx: null,
   synthOsc: null,
   synthGain: null,
@@ -39,6 +42,12 @@ const dom = {
   errorContainer: document.getElementById('error-container'),
   errorTitle: document.getElementById('error-title'),
   errorDesc: document.getElementById('error-desc'),
+
+  realAudioPlayer: document.getElementById('real-audio-player'),
+  likedCountBadge: document.getElementById('liked-count'),
+  modalLikedCount: document.getElementById('modal-liked-count'),
+  likedModalBackdrop: document.getElementById('liked-modal-backdrop'),
+  likedTracksList: document.getElementById('liked-tracks-list'),
 };
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
@@ -252,6 +261,9 @@ function closeSpatialArena() {
   if (!state.isOpened) return;
   state.isOpened = false;
 
+  // Automatically pause audio when closing the player
+  pauseCurrentAudio();
+
   // Zoom back out of the spatial cosmos to the MP3 device
   if (dom.openedContainer) {
     dom.openedContainer.classList.add('dive-out');
@@ -323,7 +335,7 @@ function buildSpatialCardElements() {
 
   state.tracks.forEach((track, index) => {
     const card = document.createElement('article');
-    const isLiked = state.likedTrackIds.has(track.id);
+    const isLiked = state.likedTracks.has(String(track.id));
     card.className = 'glass-track-card';
     card.dataset.index = index;
 
@@ -383,8 +395,8 @@ function buildSpatialCardElements() {
         </button>
 
         <!-- Heart / Favorite -->
-        <button class="minimal-icon-btn ${isLiked ? 'is-active-btn' : ''}" onclick="event.stopPropagation(); window.toggleLike('${track.id}');" title="Favorite" aria-label="Favorite">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8">
+        <button class="minimal-icon-btn card-heart-btn ${isLiked ? 'is-liked' : ''}" onclick="event.stopPropagation(); window.toggleLike('${track.id}');" title="${isLiked ? 'Unlike' : 'Favorite'}" aria-label="Favorite">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? '#e11d48' : 'none'}" stroke="${isLiked ? '#e11d48' : 'currentColor'}" stroke-width="1.8">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
           </svg>
         </button>
@@ -521,10 +533,22 @@ function updateSpatialTransforms(dragOffsetPx = 0) {
  */
 function selectTrack(index) {
   if (index < 0 || index >= state.tracks.length) return;
+  const changed = state.activeIndex !== index;
   state.activeIndex = index;
-  state.progressSeconds = Math.floor(Math.random() * 30) + 15;
+
+  if (changed) {
+    state.progressSeconds = 0;
+    if (state.audioEl) {
+      state.audioEl.currentTime = 0;
+    }
+  }
+
   renderClosedArtifact();
   updateSpatialTransforms(0);
+
+  if (changed && state.isPlaying) {
+    playCurrentAudio();
+  }
 }
 
 function nextTrack() {
@@ -653,49 +677,321 @@ function setupGestureControls() {
 
 /**
  * ============================================================================
- * 5. TACTILE AUDIO PLAYBACK & SYNTHESIS
+ * 5. REAL AUDIO PLAYBACK (Via Backend /api/preview Proxy) & SYNTH FALLBACK
  * ============================================================================
  */
-function togglePlay() {
-  state.isPlaying = !state.isPlaying;
-  updatePlayStateUI();
+function initHtml5Audio() {
+  const audioEl = document.getElementById('real-audio-player');
+  if (!audioEl) return;
+  state.audioEl = audioEl;
+
+  audioEl.addEventListener('timeupdate', () => {
+    if (audioEl.duration && !isNaN(audioEl.duration) && audioEl.duration > 0) {
+      state.progressSeconds = Math.floor(audioEl.currentTime);
+      state.trackDuration = Math.floor(audioEl.duration);
+    }
+    updateTimelineDisplays();
+  });
+
+  audioEl.addEventListener('ended', () => {
+    // Automatically advance to the next track on preview end
+    nextTrack();
+  });
+
+  audioEl.addEventListener('play', () => {
+    state.isPlaying = true;
+    updatePlayStateUI();
+  });
+
+  audioEl.addEventListener('pause', () => {
+    state.isPlaying = false;
+    updatePlayStateUI();
+  });
+
+  audioEl.addEventListener('error', (e) => {
+    console.warn('HTML5 Audio encountered error or missing stream. Falling back to ambient synth.', e);
+    if (state.isPlaying) {
+      startGentleSynth();
+    }
+  });
+}
+
+async function togglePlay() {
+  if (state.tracks.length === 0) return;
+  const current = state.tracks[state.activeIndex] || state.tracks[0];
+  if (!current) return;
 
   if (state.isPlaying) {
-    startGentleSynth();
+    pauseCurrentAudio();
   } else {
-    stopGentleSynth();
+    await playCurrentAudio();
   }
 }
 
-function toggleCardPlay(index) {
+async function toggleCardPlay(index) {
   if (state.activeIndex !== index) {
     selectTrack(index);
-    state.isPlaying = true;
-    startGentleSynth();
+    await playCurrentAudio();
   } else {
-    togglePlay();
+    await togglePlay();
   }
   updatePlayStateUI();
 }
 
-function toggleLike(trackId) {
-  if (state.likedTrackIds.has(trackId)) {
-    state.likedTrackIds.delete(trackId);
-  } else {
-    state.likedTrackIds.add(trackId);
+async function playCurrentAudio() {
+  if (state.tracks.length === 0) return;
+  const current = state.tracks[state.activeIndex] || state.tracks[0];
+  if (!current) return;
+
+  const audioEl = state.audioEl || document.getElementById('real-audio-player');
+  if (!audioEl) {
+    state.isPlaying = true;
+    startGentleSynth();
+    updatePlayStateUI();
+    return;
   }
-  buildSpatialCardElements();
-  updateSpatialTransforms(0);
+
+  // If this audio preview is already loaded on the element, simply resume
+  if (state.currentAudioTrackId === String(current.id) && audioEl.src) {
+    try {
+      await audioEl.play();
+      state.isPlaying = true;
+      stopGentleSynth();
+      updatePlayStateUI();
+      return;
+    } catch (e) {
+      console.warn('Audio resume interrupted, reloading stream:', e);
+    }
+  }
+
+  // Load 30s preview from backend proxy route exclusively (zero external requests in browser)
+  setAudioLoadingUI(true);
+  try {
+    const res = await fetch(`/api/preview?track=${encodeURIComponent(current.title)}&artist=${encodeURIComponent(current.artist)}`);
+    const data = await res.json();
+
+    if (data.success && data.hasPreview && data.previewUrl) {
+      audioEl.src = data.previewUrl;
+      state.currentAudioTrackId = String(current.id);
+      state.trackDuration = data.durationSeconds || 30;
+      await audioEl.play();
+      state.isPlaying = true;
+      stopGentleSynth();
+    } else {
+      console.log(`[AUDIO] No iTunes preview found for "${current.title}", using gentle synth fallback.`);
+      state.isPlaying = true;
+      startGentleSynth();
+    }
+  } catch (err) {
+    console.error('Failed to load audio preview from proxy:', err);
+    state.isPlaying = true;
+    startGentleSynth();
+  } finally {
+    setAudioLoadingUI(false);
+    updatePlayStateUI();
+    updateTimelineDisplays();
+  }
+}
+
+function pauseCurrentAudio() {
+  state.isPlaying = false;
+  const audioEl = state.audioEl || document.getElementById('real-audio-player');
+  if (audioEl) {
+    audioEl.pause();
+  }
+  stopGentleSynth();
+  updatePlayStateUI();
+}
+
+function setAudioLoadingUI(isLoading) {
+  state.isAudioLoading = isLoading;
+  const lcdFill = document.querySelector('.lcd-progress-fill');
+  if (lcdFill) lcdFill.classList.toggle('is-loading', isLoading);
+
+  const cardFill = document.getElementById(`timeline-fill-${state.activeIndex}`);
+  if (cardFill) cardFill.classList.toggle('is-loading', isLoading);
 }
 
 function handleTimelineScrub(e, index) {
+  if (state.activeIndex !== index) {
+    selectTrack(index);
+  }
   const rect = e.currentTarget.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-  state.progressSeconds = Math.floor(ratio * state.trackDuration);
+  const targetTime = ratio * state.trackDuration;
+  state.progressSeconds = Math.floor(targetTime);
+
+  const audioEl = state.audioEl || document.getElementById('real-audio-player');
+  if (audioEl && !isNaN(audioEl.duration) && audioEl.duration > 0) {
+    audioEl.currentTime = targetTime;
+  }
   updateTimelineDisplays();
 }
 
+/**
+ * ============================================================================
+ * 6. LIKED TRACKS (Heart Toggle, LocalStorage Persistence & Drawer Modal)
+ * ============================================================================
+ */
+function loadLikedTracksFromStorage() {
+  try {
+    const raw = localStorage.getItem('spatial_liked_tracks');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        state.likedTracks = new Map(parsed.map((t) => [String(t.id), t]));
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse liked tracks from localStorage:', e);
+    state.likedTracks = new Map();
+  }
+  updateLikedCountUI();
+}
+
+function saveLikedTracksToStorage() {
+  try {
+    const list = Array.from(state.likedTracks.values());
+    localStorage.setItem('spatial_liked_tracks', JSON.stringify(list));
+  } catch (e) {}
+  updateLikedCountUI();
+}
+
+function updateLikedCountUI() {
+  const count = state.likedTracks.size;
+  const countBadge = document.getElementById('liked-count');
+  const modalCount = document.getElementById('modal-liked-count');
+  if (countBadge) countBadge.textContent = String(count);
+  if (modalCount) modalCount.textContent = String(count);
+}
+
+function toggleLike(trackId) {
+  const idStr = String(trackId);
+  const isLiked = state.likedTracks.has(idStr);
+
+  // Find track in current tracks or in liked list
+  let trackObj = state.tracks.find((t) => String(t.id) === idStr) || state.likedTracks.get(idStr);
+
+  if (isLiked) {
+    state.likedTracks.delete(idStr);
+  } else if (trackObj) {
+    state.likedTracks.set(idStr, {
+      id: trackObj.id,
+      title: trackObj.title,
+      artist: trackObj.artist,
+      album: trackObj.album || '',
+      image: trackObj.image || DEFAULT_COVER,
+    });
+  }
+
+  saveLikedTracksToStorage();
+
+  // Find heart button on active card to trigger pop animation
+  const cardBtn = document.querySelector(`.glass-track-card[data-index="${state.activeIndex}"] .card-heart-btn`);
+  if (cardBtn) {
+    cardBtn.classList.add('pop');
+    setTimeout(() => cardBtn.classList.remove('pop'), 450);
+  }
+
+  buildSpatialCardElements();
+  updateSpatialTransforms(0);
+
+  // If modal is open, re-render its list immediately
+  const modal = document.getElementById('liked-modal-backdrop');
+  if (modal && !modal.classList.contains('hidden')) {
+    renderLikedDrawerContent();
+  }
+}
+
+function toggleLikedDrawer() {
+  const modal = document.getElementById('liked-modal-backdrop');
+  if (!modal) return;
+  const isHidden = modal.classList.contains('hidden');
+  if (isHidden) {
+    modal.classList.remove('hidden');
+    renderLikedDrawerContent();
+  } else {
+    modal.classList.add('hidden');
+  }
+}
+
+function closeLikedDrawer(e) {
+  if (e && e.target && e.target !== e.currentTarget && !e.target.classList.contains('modal-close-btn')) {
+    return;
+  }
+  const modal = document.getElementById('liked-modal-backdrop');
+  if (modal) modal.classList.add('hidden');
+}
+
+function renderLikedDrawerContent() {
+  const listEl = document.getElementById('liked-tracks-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  const likedArr = Array.from(state.likedTracks.values());
+  if (likedArr.length === 0) {
+    listEl.innerHTML = `
+      <div class="modal-empty-state">
+        <div class="modal-empty-icon">♡</div>
+        <h3 class="modal-empty-title">Your favorites collection is empty</h3>
+        <p class="modal-empty-desc">Click the heart icon on any floating music card to save songs into your personal archive.</p>
+      </div>
+    `;
+    return;
+  }
+
+  likedArr.forEach((track) => {
+    const row = document.createElement('div');
+    row.className = 'liked-track-row';
+    const artSrc = track.image || DEFAULT_COVER;
+
+    row.innerHTML = `
+      <img src="${artSrc}" alt="${escapeHtml(track.title)}" class="liked-row-art" />
+      <div class="liked-row-meta">
+        <span class="liked-row-title" title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</span>
+        <span class="liked-row-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</span>
+      </div>
+      <div class="liked-row-actions">
+        <button class="liked-row-play-btn" onclick="window.playLikedTrack('${track.id}')" title="Play ${escapeHtml(track.title)}" aria-label="Play track">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6 4 20 12 6 20 6 4"></polygon>
+          </svg>
+        </button>
+        <button class="liked-row-remove-btn" onclick="window.toggleLike('${track.id}')" title="Remove from Favorites" aria-label="Remove favorite">
+          ✕
+        </button>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function playLikedTrack(trackId) {
+  const idStr = String(trackId);
+  const trackIdx = state.tracks.findIndex((t) => String(t.id) === idStr);
+
+  if (trackIdx !== -1) {
+    selectTrack(trackIdx);
+    playCurrentAudio();
+  } else {
+    const likedObj = state.likedTracks.get(idStr);
+    if (likedObj) {
+      state.tracks.unshift(likedObj);
+      buildSpatialCardElements();
+      selectTrack(0);
+      playCurrentAudio();
+    }
+  }
+
+  closeLikedDrawer();
+}
+
+/**
+ * ============================================================================
+ * 7. UI DISPLAY & SYNTHESIS CONTROLS
+ * ============================================================================
+ */
 function updatePlayStateUI() {
   if (dom.triggerPlayIcon) dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
   if (dom.triggerPauseIcon) dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
@@ -801,8 +1097,9 @@ function stopGentleSynth() {
   }
 }
 
+// Fallback timer for synth progress if real audio element is inactive
 setInterval(() => {
-  if (state.isPlaying) {
+  if (state.isPlaying && (!state.audioEl || state.audioEl.paused)) {
     state.progressSeconds = (state.progressSeconds + 1) % state.trackDuration;
     updateTimelineDisplays();
   }
@@ -818,9 +1115,14 @@ window.addEventListener('keydown', (e) => {
   } else if (e.code === 'ArrowLeft') {
     e.preventDefault();
     prevTrack();
-  } else if (e.code === 'Escape' && state.isOpened) {
+  } else if (e.code === 'Escape') {
     e.preventDefault();
-    closeSpatialArena();
+    const modal = document.getElementById('liked-modal-backdrop');
+    if (modal && !modal.classList.contains('hidden')) {
+      closeLikedDrawer();
+    } else if (state.isOpened) {
+      closeSpatialArena();
+    }
   }
 });
 
@@ -852,9 +1154,14 @@ window.nextTrack = nextTrack;
 window.prevTrack = prevTrack;
 window.shuffleTracks = shuffleTracks;
 window.toggleLike = toggleLike;
+window.toggleLikedDrawer = toggleLikedDrawer;
+window.closeLikedDrawer = closeLikedDrawer;
+window.playLikedTrack = playLikedTrack;
 window.handleTimelineScrub = handleTimelineScrub;
 
 window.addEventListener('DOMContentLoaded', () => {
+  initHtml5Audio();
+  loadLikedTracksFromStorage();
   initClickWheelControls();
   setupGestureControls();
   loadRecentTracks();

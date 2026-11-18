@@ -390,12 +390,18 @@ body.editorial-body::before {
   margin-top: 14px;
 }
 
-/* Discrete Floating Minimal Close Button */
-.editorial-close-btn {
+/* Editorial Top Dock (Liked + Close) */
+.editorial-top-dock {
   position: fixed;
   top: 32px;
   right: 36px;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editorial-dock-pill {
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -413,12 +419,315 @@ body.editorial-body::before {
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
   transition: all 0.25s var(--ease-spring);
+  outline: none;
+  user-select: none;
 }
 
-.editorial-close-btn:hover {
+.editorial-dock-pill:hover {
   background: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+.editorial-dock-pill:active {
+  transform: translateY(0);
+}
+
+.dock-heart-icon {
+  color: #e11d48;
+  font-size: 0.88rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.editorial-dock-pill:hover .dock-heart-icon {
+  transform: scale(1.25);
+}
+
+.dock-count-badge {
+  background: rgba(225, 29, 72, 0.1);
+  color: #e11d48;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 12px;
+}
+
+/* Discrete Floating Minimal Close Button */
+.editorial-close-btn {
+  /* Inherits dock pill */
+}
+
+/* Liked Songs Translucent Frosted Glass Modal */
+.glass-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 22, 28, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+  padding: 20px;
+}
+
+.glass-modal-window {
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(36px);
+  -webkit-backdrop-filter: blur(36px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 28px;
+  box-shadow: 0 35px 80px -15px rgba(0, 0, 0, 0.14),
+              0 10px 25px -5px rgba(0, 0, 0, 0.05),
+              inset 0 1.5px 2px rgba(255, 255, 255, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.35s var(--ease-spring);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.glass-modal-header {
+  padding: 22px 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modal-header-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+}
+
+.modal-close-btn {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: #ffffff;
+  color: var(--text-dark);
+  transform: rotate(90deg);
+}
+
+.glass-modal-body {
+  padding: 14px 20px 22px;
+  overflow-y: auto;
+  max-height: calc(80vh - 90px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Liked Track Row */
+.liked-track-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  transition: all 0.2s ease;
+}
+
+.liked-track-row:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 1);
+  transform: translateX(3px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.liked-row-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #1c2028;
+}
+
+.liked-row-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.liked-row-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.liked-row-artist {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.liked-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.liked-row-play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1c1c1a;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.liked-row-play-btn:hover {
+  transform: scale(1.1);
+  background: #000000;
+}
+
+.liked-row-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  color: #e11d48;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.liked-row-remove-btn:hover {
+  transform: scale(1.2);
+  background: rgba(225, 29, 72, 0.08);
+}
+
+/* Modal Empty State */
+.modal-empty-state {
+  padding: 38px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.modal-empty-icon {
+  font-size: 2.2rem;
+  color: rgba(225, 29, 72, 0.35);
+  margin-bottom: 12px;
+}
+
+.modal-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.modal-empty-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+/* Floating Card Heart / Favorite Button */
+.card-heart-btn {
+  transition: color 0.2s ease, transform 0.2s var(--ease-spring);
+}
+
+.card-heart-btn.is-liked {
+  color: #e11d48 !important;
+  filter: drop-shadow(0 0 8px rgba(225, 29, 72, 0.5));
+}
+
+.card-heart-btn.is-liked svg path {
+  fill: #e11d48;
+  stroke: #e11d48;
+}
+
+.card-heart-btn.pop {
+  animation: heartPop 0.4s var(--ease-spring);
+}
+
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.42); }
+  100% { transform: scale(1); }
+}
+
+/* Audio Preview Loading Glow on Timeline & LCD */
+.lcd-progress-fill.is-loading,
+.timeline-fill.is-loading {
+  animation: audioLoadingPulse 1.2s infinite ease-in-out;
+  background: linear-gradient(90deg, #60a5fa, #f472b6, #60a5fa);
+  background-size: 200% 100%;
+}
+
+@keyframes audioLoadingPulse {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 /* Quiet Fallback Notification */

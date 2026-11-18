@@ -11,6 +11,7 @@
  */
 
 const path = require('path');
+const { Readable } = require('stream');
 
 // Ensure dotenv is loaded properly at the very top from both local and root .env
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
@@ -107,6 +108,132 @@ app.get('/api/recent-tracks', async (req, res) => {
       details: error.message,
       tracks: [],
     });
+  }
+});
+
+/**
+ * GET /api/preview
+ * Resolves free 30s audio preview via iTunes Search API with in-memory caching.
+ * The browser only calls this route (never external domains).
+ */
+app.get('/api/preview', async (req, res) => {
+  try {
+    const track = (req.query.track || '').trim();
+    const artist = (req.query.artist || '').trim();
+
+    if (!track && !artist) {
+      return res.status(400).json({ error: true, message: 'track or artist query parameter required' });
+    }
+
+    const cacheKey = `preview:${artist.toLowerCase()}:${track.toLowerCase()}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.json({
+        ...cached.data,
+        _cache: { hit: true, cachedAt: cached.cachedAt },
+      });
+    }
+
+    const searchTerm = `${track} ${artist}`.trim();
+    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&entity=song&limit=1`;
+    console.log(`[PREVIEW SEARCH] Querying iTunes preview proxy for: "${searchTerm}"`);
+
+    const response = await fetch(itunesUrl, {
+      signal: AbortSignal.timeout(5000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`iTunes Search API returned HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const item = data.results && data.results[0];
+
+    if (!item || !item.previewUrl) {
+      console.log(`[PREVIEW] No preview found for "${searchTerm}"`);
+      const payload = {
+        success: true,
+        hasPreview: false,
+        track,
+        artist,
+        previewUrl: null,
+        message: 'No audio preview available for this track',
+      };
+      cache.set(cacheKey, payload, 300); // 5 min negative cache
+      res.setHeader('X-Cache', 'MISS');
+      return res.json(payload);
+    }
+
+    const proxiedUrl = `/api/preview/stream?url=${encodeURIComponent(item.previewUrl)}`;
+    const payload = {
+      success: true,
+      hasPreview: true,
+      track: item.trackName || track,
+      artist: item.artistName || artist,
+      album: item.collectionName || '',
+      artwork: item.artworkUrl100 || null,
+      previewUrl: proxiedUrl,
+      durationSeconds: 30,
+    };
+
+    cache.set(cacheKey, payload, 7200); // 2 hours cache
+    res.setHeader('X-Cache', 'MISS');
+    return res.json(payload);
+  } catch (err) {
+    console.error(`[PREVIEW ERROR] Failed to fetch preview for "${req.query.track} - ${req.query.artist}":`, err.message);
+    return res.json({
+      success: true,
+      hasPreview: false,
+      track: req.query.track || '',
+      artist: req.query.artist || '',
+      previewUrl: null,
+      message: 'Preview service temporarily unavailable: ' + err.message,
+    });
+  }
+});
+
+/**
+ * GET /api/preview/stream
+ * Proxies the remote 30s audio preview stream so ZERO external network requests appear in the browser tab.
+ */
+app.get('/api/preview/stream', async (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl || !targetUrl.startsWith('https://')) {
+    return res.status(400).json({ error: true, message: 'Invalid or missing audio URL' });
+  }
+
+  try {
+    const audioRes = await fetch(targetUrl, {
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        ...(req.headers.range ? { Range: req.headers.range } : {}),
+      },
+    });
+
+    if (!audioRes.ok && audioRes.status !== 206) {
+      return res.status(audioRes.status).send('Unable to stream preview audio');
+    }
+
+    res.status(audioRes.status);
+    const contentType = audioRes.headers.get('content-type') || 'audio/x-m4a';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    if (audioRes.headers.get('content-range')) {
+      res.setHeader('Content-Range', audioRes.headers.get('content-range'));
+    }
+    if (audioRes.headers.get('content-length')) {
+      res.setHeader('Content-Length', audioRes.headers.get('content-length'));
+    }
+
+    Readable.fromWeb(audioRes.body).pipe(res);
+  } catch (err) {
+    console.error('[AUDIO PROXY ERROR]', err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ error: true, message: 'Audio stream proxy error' });
+    }
   }
 });
 

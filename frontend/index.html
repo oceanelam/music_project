@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Recent Rotation • Spatial Glass Music Player</title>
-  <link rel="stylesheet" href="style.css?v=20261118_v3" />
+  <link rel="stylesheet" href="style.css?v=20261118_v4" />
   <!-- Editorial fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -128,14 +128,41 @@
     <span class="watermark-sub" id="watermark-user"></span>
   </div>
 
-  <!-- Discrete Floating Minimal Close / Dock Button (visible only when opened) -->
-  <button id="btn-dock-close" class="editorial-close-btn hidden" onclick="window.closeSpatialArena()" title="Collapse back into MP3 player" aria-label="Close floating cards">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
-    <span>CLOSE</span>
-  </button>
+  <!-- Editorial Top Dock: Liked Tracks Tray + Close Arena Button -->
+  <header class="editorial-top-dock">
+    <button id="btn-liked-tray" class="editorial-dock-pill" onclick="window.toggleLikedDrawer()" title="View saved favorite tracks" aria-label="View Liked Tracks">
+      <span class="dock-heart-icon">♥</span>
+      <span class="dock-label">LIKED</span>
+      <span class="dock-count-badge" id="liked-count">0</span>
+    </button>
+    <button id="btn-dock-close" class="editorial-dock-pill editorial-close-btn hidden" onclick="window.closeSpatialArena()" title="Collapse back into MP3 player" aria-label="Close floating cards">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+      <span>CLOSE</span>
+    </button>
+  </header>
+
+  <!-- Liked Songs Translucent Frosted Glass Modal -->
+  <div id="liked-modal-backdrop" class="glass-modal-backdrop hidden" onclick="window.closeLikedDrawer(event)">
+    <div class="glass-modal-window" onclick="event.stopPropagation()">
+      <div class="glass-modal-header">
+        <div class="modal-header-meta">
+          <span class="modal-eyebrow">FAVORITES ARCHIVE</span>
+          <h2 class="modal-title">Liked Tracks (<span id="modal-liked-count">0</span>)</h2>
+        </div>
+        <button class="modal-close-btn" onclick="window.closeLikedDrawer()" title="Close Favorites" aria-label="Close Favorites">✕</button>
+      </div>
+
+      <div class="glass-modal-body" id="liked-tracks-list">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Native HTML5 Audio Engine for Proxied 30s Previews -->
+  <audio id="real-audio-player" preload="none"></audio>
 
   <!-- Quiet Fallback Notification (clean, non-intrusive) -->
   <aside id="fallback-banner" class="editorial-notice hidden">
@@ -300,6 +327,6 @@
 
   </main>
 
-  <script src="app.js?v=20261118_v3"></script>
+  <script src="app.js?v=20261118_v4"></script>
 </body>
 </html>
