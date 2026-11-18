@@ -143,13 +143,55 @@ function renderClosedArtifact() {
 }
 
 function openSpatialArena() {
+  if (state.isOpened) return;
   state.isOpened = true;
-  showOpenedView();
+
+  // Camera-zoom dive transition into the MP3 device screen
+  if (dom.closedContainer) {
+    dom.closedContainer.classList.add('dive-in');
+  }
+
+  setTimeout(() => {
+    if (dom.closedContainer) {
+      dom.closedContainer.classList.add('hidden');
+      dom.closedContainer.classList.remove('dive-in');
+    }
+    if (dom.openedContainer) {
+      dom.openedContainer.classList.remove('hidden');
+      dom.openedContainer.classList.remove('dive-out');
+    }
+    if (dom.btnDockClose) dom.btnDockClose.classList.remove('hidden');
+    if (dom.errorContainer) dom.errorContainer.classList.add('hidden');
+
+    buildSpatialCardElements();
+    updateSpatialTransforms(0);
+  }, 480);
 }
 
 function closeSpatialArena() {
+  if (!state.isOpened) return;
   state.isOpened = false;
-  showClosedView();
+
+  // Zoom back out of the spatial cosmos to the MP3 device
+  if (dom.openedContainer) {
+    dom.openedContainer.classList.add('dive-out');
+  }
+  if (dom.closedContainer) {
+    dom.closedContainer.classList.remove('hidden');
+    dom.closedContainer.classList.add('zoom-back-in');
+  }
+
+  setTimeout(() => {
+    if (dom.openedContainer) {
+      dom.openedContainer.classList.add('hidden');
+      dom.openedContainer.classList.remove('dive-out');
+    }
+    if (dom.btnDockClose) dom.btnDockClose.classList.add('hidden');
+    if (dom.closedContainer) {
+      dom.closedContainer.classList.remove('zoom-back-in');
+    }
+    renderClosedArtifact();
+  }, 460);
 }
 
 /**
