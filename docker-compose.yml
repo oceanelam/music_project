@@ -1,0 +1,27 @@
+services:
+  # Backend API: Handles Last.fm requests, securely stores API key, and maintains in-memory cache
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: music-backend-api
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - LASTFM_API_KEY=${LASTFM_API_KEY}
+      - LASTFM_DEFAULT_USER=${LASTFM_DEFAULT_USER:-rj}
+      - CACHE_TTL_SECONDS=${CACHE_TTL_SECONDS:-60}
+    restart: unless-stopped
+
+  # Frontend UI: Nginx web server hosting the glassmorphic Floating MP3 Player and proxying /api/ to backend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: music-frontend-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
