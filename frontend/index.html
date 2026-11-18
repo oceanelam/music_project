@@ -8,13 +8,52 @@
   <!-- Editorial fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body class="editorial-body">
 
   <!-- Subtle Studio Light Refractions (Warm neutral ambient) -->
   <div class="studio-light studio-light-1"></div>
   <div class="studio-light studio-light-2"></div>
+
+  <!-- Decorative Ambient Layer: Sparkles, Music Notes & Translucent Vinyls (Non-interactive) -->
+  <div class="ambient-celestial-canvas" aria-hidden="true">
+    <!-- Shimmering Sparkles / Light Glints -->
+    <span class="sparkle sp-1"></span>
+    <span class="sparkle sp-2"></span>
+    <span class="sparkle sp-3"></span>
+    <span class="sparkle sp-4"></span>
+    <span class="sparkle sp-5"></span>
+    <span class="sparkle sp-6"></span>
+    <span class="sparkle sp-7"></span>
+    <span class="sparkle sp-8"></span>
+    <span class="sparkle sp-9"></span>
+    <span class="sparkle sp-10"></span>
+
+    <!-- Floating Minimalist Music Notes (♪, ♫) -->
+    <span class="floating-note fn-1">♪</span>
+    <span class="floating-note fn-2">♫</span>
+    <span class="floating-note fn-3">♪</span>
+    <span class="floating-note fn-4">♫</span>
+    <span class="floating-note fn-5">♪</span>
+
+    <!-- Thin-Line Translucent Vinyl Disc Outlines -->
+    <div class="ambient-vinyl av-1">
+      <div class="av-ring"></div>
+      <div class="av-ring"></div>
+      <div class="av-center"></div>
+    </div>
+    <div class="ambient-vinyl av-2">
+      <div class="av-ring"></div>
+      <div class="av-ring"></div>
+      <div class="av-center"></div>
+    </div>
+    <div class="ambient-vinyl av-3">
+      <div class="av-ring"></div>
+      <div class="av-ring"></div>
+      <div class="av-center"></div>
+    </div>
+  </div>
 
   <!-- Understated Editorial Watermark in Background -->
   <div class="editorial-watermark" id="editorial-watermark">
@@ -41,43 +80,118 @@
   <main class="spatial-canvas" id="spatial-canvas">
 
     <!-- ================================================================= -->
-    <!-- 1. CLOSED STATE: Sleek Translucent Frosted Glass MP3 Object        -->
+    <!-- 1. CLOSED STATE: Iconic Retro Silver Metallic MP3 Player          -->
     <!-- ================================================================= -->
     <section class="closed-state-container" id="closed-container">
-      <div class="mp3-artifact" id="closed-mp3-object" role="button" tabindex="0" onclick="window.openSpatialArena()" title="Click to open floating cards">
-        <!-- Glass reflections -->
-        <div class="artifact-specular"></div>
+      <div class="retro-mp3-device" id="closed-mp3-object" role="button" tabindex="0" onclick="window.openSpatialArena()" title="Click to open floating cards">
+        <!-- Brushed metallic reflection & highlight sheen -->
+        <div class="device-metal-sheen"></div>
+        <div class="device-bevel-edge"></div>
 
-        <!-- Upper display slot -->
-        <div class="artifact-header">
-          <span class="artifact-label">AUDIO • ARCHIVE</span>
-          <span class="artifact-dot"></span>
+        <!-- Top Half: Inset Dark LCD Screen -->
+        <div class="retro-lcd-screen">
+          <!-- Screen Header: Status Bar -->
+          <div class="lcd-status-row">
+            <div class="lcd-playing-indicator">
+              <span class="lcd-play-glyph">▶</span>
+              <span>Now playing</span>
+            </div>
+            <div class="lcd-icons-right">
+              <!-- Tiny Battery Icon -->
+              <span class="lcd-battery" title="Battery: 100%">
+                <span class="battery-body"><span class="battery-level"></span></span>
+                <span class="battery-nipple"></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Screen Body: Album Art Thumbnail + Track Meta -->
+          <div class="lcd-body-row">
+            <div class="lcd-art-frame">
+              <img id="closed-cover-img" src="" alt="Album artwork" class="lcd-art-img" />
+              <div class="lcd-art-glass"></div>
+            </div>
+            <div class="lcd-meta-column">
+              <h2 class="lcd-track-title" id="closed-track-title">Loading...</h2>
+              <p class="lcd-track-artist" id="closed-track-artist">Connecting to proxy</p>
+              <span class="lcd-album-tag">Last.fm Audio</span>
+            </div>
+          </div>
+
+          <!-- Screen Footer: Hair-thin Progress Bar -->
+          <div class="lcd-progress-row">
+            <div class="lcd-progress-track">
+              <div class="lcd-progress-fill"></div>
+            </div>
+            <div class="lcd-time-readout">
+              <span>0:42</span>
+              <span>-2:38</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Center square album artwork -->
-        <div class="artifact-art-frame">
-          <img id="closed-cover-img" src="" alt="Album artwork" class="artifact-art-img" />
-        </div>
-
-        <!-- Minimal typography -->
-        <div class="artifact-meta">
-          <h2 class="artifact-title" id="closed-track-title">Loading...</h2>
-          <p class="artifact-artist" id="closed-track-artist">Connecting to proxy</p>
-        </div>
-
-        <!-- Single Tactile Circular White Trigger Button -->
-        <div class="artifact-controls">
-          <div class="tactile-trigger" id="tactile-trigger-btn">
-            <svg id="trigger-play-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="6 4 20 12 6 20 6 4"></polygon>
+        <!-- Bottom Half: Tactile Click-Wheel -->
+        <div class="retro-clickwheel" id="retro-clickwheel">
+          <!-- Top Menu Button -->
+          <span class="wheel-label wheel-top">MENU</span>
+          <!-- Left Prev Button -->
+          <span class="wheel-icon wheel-left">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="19 20 9 12 19 4 19 20"></polygon>
+              <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5"></line>
             </svg>
-            <svg id="trigger-pause-icon" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          </span>
+          <!-- Right Next Button -->
+          <span class="wheel-icon wheel-right">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 4 15 12 5 20 5 4"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5"></line>
+            </svg>
+          </span>
+          <!-- Bottom Play/Pause Button -->
+          <span class="wheel-icon wheel-bottom">
+            <svg id="trigger-play-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg id="trigger-pause-icon" class="hidden" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="4" width="4" height="16"></rect>
               <rect x="14" y="4" width="4" height="16"></rect>
             </svg>
+          </span>
+
+          <!-- Center Tactile Circular Button -->
+          <div class="wheel-center-button" title="Open player">
+            <div class="wheel-center-core"></div>
           </div>
-          <span class="tactile-caption">CLICK TO OPEN</span>
         </div>
+
+        <!-- Cute Personal Touch: Dangling Y2K Silver Star Charm -->
+        <div class="dangling-charm" aria-hidden="true">
+          <div class="charm-eyelet"></div>
+          <div class="charm-chain">
+            <span class="chain-link link-1"></span>
+            <span class="chain-link link-2"></span>
+            <span class="chain-link link-3"></span>
+          </div>
+          <div class="charm-star">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="url(#silverGrad)" stroke="#a1a5ad" stroke-width="0.8">
+              <defs>
+                <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffffff" />
+                  <stop offset="40%" stop-color="#d1d4d8" />
+                  <stop offset="80%" stop-color="#9ea3aa" />
+                  <stop offset="100%" stop-color="#7a7e86" />
+                </linearGradient>
+              </defs>
+              <!-- Elegant 4-point star with soft inner flares -->
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Subtle headphone jack port on top edge -->
+        <div class="device-jack-port"></div>
+        <div class="device-hold-switch"></div>
       </div>
     </section>
 
