@@ -376,11 +376,11 @@ function buildSpatialCardElements() {
         </button>
 
         <!-- Round Solid White Play/Pause Button -->
-        <button class="round-white-play-btn" onclick="event.stopPropagation(); window.toggleCardPlay(${index});" title="Play or Pause" aria-label="Play">
-          <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <button class="round-white-play-btn" onclick="event.stopPropagation(); window.toggleCardPlay(${index});" title="${index === state.activeIndex && state.isPlaying ? 'Pause' : 'Play'}" aria-label="Play or Pause">
+          <svg class="icon-play ${index === state.activeIndex && state.isPlaying ? 'hidden' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="6 4 20 12 6 20 6 4"></polygon>
           </svg>
-          <svg class="icon-pause hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <svg class="icon-pause ${index === state.activeIndex && state.isPlaying ? '' : 'hidden'}" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="4" width="4" height="16"></rect>
             <rect x="14" y="4" width="4" height="16"></rect>
           </svg>
@@ -798,9 +798,13 @@ function pauseCurrentAudio() {
   const audioEl = state.audioEl || document.getElementById('real-audio-player');
   if (audioEl) {
     audioEl.pause();
+    if (!isNaN(audioEl.currentTime)) {
+      state.progressSeconds = Math.floor(audioEl.currentTime);
+    }
   }
   stopGentleSynth();
   updatePlayStateUI();
+  updateTimelineDisplays();
 }
 
 function setAudioLoadingUI(isLoading) {
@@ -993,8 +997,16 @@ function playLikedTrack(trackId) {
  * ============================================================================
  */
 function updatePlayStateUI() {
-  if (dom.triggerPlayIcon) dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
-  if (dom.triggerPauseIcon) dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
+  const playIcon = dom.triggerPlayIcon || document.getElementById('trigger-play-icon');
+  const pauseIcon = dom.triggerPauseIcon || document.getElementById('trigger-pause-icon');
+  if (playIcon) playIcon.classList.toggle('hidden', state.isPlaying);
+  if (pauseIcon) pauseIcon.classList.toggle('hidden', !state.isPlaying);
+
+  const wheelPlayBtn = document.getElementById('wheel-play-btn');
+  if (wheelPlayBtn) {
+    wheelPlayBtn.title = state.isPlaying ? 'Pause on LCD' : 'Play on LCD';
+    wheelPlayBtn.setAttribute('aria-label', state.isPlaying ? 'Pause' : 'Play');
+  }
 
   // Sync retro MP3 LCD screen glyph & playback indicator
   const lcdGlyph = document.querySelector('.lcd-play-glyph');
@@ -1018,16 +1030,16 @@ function updatePlayStateUI() {
 
   document.querySelectorAll('.glass-track-card').forEach((card) => {
     const idx = parseInt(card.dataset.index, 10);
-    const playIcon = card.querySelector('.icon-play');
-    const pauseIcon = card.querySelector('.icon-pause');
-    if (playIcon && pauseIcon) {
-      if (idx === state.activeIndex && state.isPlaying) {
-        playIcon.classList.add('hidden');
-        pauseIcon.classList.remove('hidden');
-      } else {
-        playIcon.classList.remove('hidden');
-        pauseIcon.classList.add('hidden');
-      }
+    const cardPlayIcon = card.querySelector('.icon-play');
+    const cardPauseIcon = card.querySelector('.icon-pause');
+    const roundPlayBtn = card.querySelector('.round-white-play-btn');
+    const isThisCardActivePlaying = idx === state.activeIndex && state.isPlaying;
+
+    if (cardPlayIcon) cardPlayIcon.classList.toggle('hidden', isThisCardActivePlaying);
+    if (cardPauseIcon) cardPauseIcon.classList.toggle('hidden', !isThisCardActivePlaying);
+    if (roundPlayBtn) {
+      roundPlayBtn.title = isThisCardActivePlaying ? 'Pause' : 'Play';
+      roundPlayBtn.setAttribute('aria-label', isThisCardActivePlaying ? 'Pause' : 'Play');
     }
   });
 }
