@@ -2,16 +2,16 @@
  * ============================================================================
  * EDITORIAL SPATIAL GLASS MUSIC PLAYER (frontend/app.js)
  * ============================================================================
- * Architecture Rules:
- * 1. Strict Reverse Proxy: Browser calls ONLY /api/recent-tracks.
- *    Zero requests to ws.audioscrobbler.com from the browser.
- * 2. Caching: 60s in-memory cache handled transparently by the backend proxy.
- * 3. Graceful Resilience: When Last.fm fails, displays a clean error message
- *    WITHOUT loading fake mock tracks, never leaving a blank screen.
+ * Rules:
+ * 1. Strict Reverse Proxy: Calls /api/recent-tracks exclusively.
+ * 2. Caching: Handled by server (60s TTL).
+ * 3. Never blank: Always renders either the MP3 player artifact,
+ *    floating cards, or a clean frosted error state card.
  */
 
 const state = {
   tracks: [],
+  currentUser: '',
   activeIndex: 0,
   isOpened: false,
   isPlaying: false,
@@ -50,6 +50,8 @@ const SPATIAL_POSITIONS = [
   'pos-bg-far-right',
 ];
 
+const DEFAULT_COVER = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+
 /**
  * ============================================================================
  * 1. PROXY DATA FETCHING (Zero direct calls to Last.fm)
@@ -57,10 +59,10 @@ const SPATIAL_POSITIONS = [
  */
 async function loadRecentTracks() {
   try {
-    // Relative URL ensures call goes strictly through local backend proxy
     const response = await fetch('/api/recent-tracks?limit=15');
     const data = await response.json();
 
+    // Check if proxy returned an error
     if (!response.ok || data.error) {
       showErrorMessage(
         'Unable to load tracks from Last.fm',
@@ -69,30 +71,27 @@ async function loadRecentTracks() {
       return;
     }
 
+    state.currentUser = data.user || 'oceanelam17';
+    if (dom.watermarkUser) {
+      dom.watermarkUser.textContent = `LISTENING HISTORY • ${state.currentUser.toUpperCase()}`;
+    }
+
+    // Hide error container
+    if (dom.errorContainer) dom.errorContainer.classList.add('hidden');
+
+    // Case A: User has 0 scrobbled tracks so far
     if (!Array.isArray(data.tracks) || data.tracks.length === 0) {
-      showErrorMessage(
-        'No Recent Scrobbles Found',
-        `User '${data.user || 'your account'}' has no recent tracks recorded on Last.fm yet. Start listening on Spotify or Last.fm to see your rotation here!`
-      );
+      state.tracks = [];
+      showEmptyAccountState(state.currentUser);
       return;
     }
 
-    // Success: hide error state
-    dom.errorContainer.classList.add('hidden');
-
+    // Case B: User has tracks!
     state.tracks = data.tracks;
-    if (data.user) {
-      dom.watermarkUser.textContent = `LISTENING HISTORY • ${data.user.toUpperCase()}`;
-    }
-
     if (state.isOpened) {
-      dom.openedContainer.classList.remove('hidden');
-      dom.closedContainer.classList.add('hidden');
-      renderSpatialCards();
+      showOpenedView();
     } else {
-      dom.closedContainer.classList.remove('hidden');
-      dom.openedContainer.classList.add('hidden');
-      renderClosedArtifact();
+      showClosedView();
     }
   } catch (err) {
     console.error('Failed to load tracks through proxy:', err);
@@ -104,17 +103,31 @@ async function loadRecentTracks() {
 }
 
 /**
- * Displays a clean error message in the center without loading fake mock songs
+ * Empty Account State: User connected, but 0 tracks scrobbled yet
+ */
+function showEmptyAccountState(username) {
+  if (dom.closedContainer) dom.closedContainer.classList.remove('hidden');
+  if (dom.openedContainer) dom.openedContainer.classList.add('hidden');
+  if (dom.btnDockClose) dom.btnDockClose.classList.add('hidden');
+  if (dom.errorContainer) dom.errorContainer.classList.add('hidden');
+
+  if (dom.closedCoverImg) dom.closedCoverImg.src = DEFAULT_COVER;
+  if (dom.closedTrackTitle) dom.closedTrackTitle.textContent = 'No Scrobbles Yet';
+  if (dom.closedTrackArtist) dom.closedTrackArtist.textContent = `User '${username}' • Play songs on Spotify`;
+}
+
+/**
+ * Error state display
  */
 function showErrorMessage(title, description) {
   state.tracks = [];
-  dom.closedContainer.classList.add('hidden');
-  dom.openedContainer.classList.add('hidden');
-  dom.btnDockClose.classList.add('hidden');
+  if (dom.closedContainer) dom.closedContainer.classList.add('hidden');
+  if (dom.openedContainer) dom.openedContainer.classList.add('hidden');
+  if (dom.btnDockClose) dom.btnDockClose.classList.add('hidden');
 
-  dom.errorTitle.textContent = title;
-  dom.errorDesc.textContent = description;
-  dom.errorContainer.classList.remove('hidden');
+  if (dom.errorTitle) dom.errorTitle.textContent = title;
+  if (dom.errorDesc) dom.errorDesc.textContent = description;
+  if (dom.errorContainer) dom.errorContainer.classList.remove('hidden');
 }
 
 /**
@@ -122,31 +135,32 @@ function showErrorMessage(title, description) {
  * 2. CLOSED STATE: MINIMALIST MP3 OBJECT
  * ============================================================================
  */
+function showClosedView() {
+  if (dom.closedContainer) dom.closedContainer.classList.remove('hidden');
+  if (dom.openedContainer) dom.openedContainer.classList.add('hidden');
+  if (dom.btnDockClose) dom.btnDockClose.classList.add('hidden');
+  if (dom.errorContainer) dom.errorContainer.classList.add('hidden');
+  renderClosedArtifact();
+}
+
 function renderClosedArtifact() {
   if (state.tracks.length === 0) return;
   const current = state.tracks[state.activeIndex] || state.tracks[0];
 
-  dom.closedCoverImg.src = current.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80';
-  dom.closedTrackTitle.textContent = current.title;
-  dom.closedTrackArtist.textContent = current.artist;
+  if (dom.closedCoverImg) dom.closedCoverImg.src = current.image || DEFAULT_COVER;
+  if (dom.closedTrackTitle) dom.closedTrackTitle.textContent = current.title;
+  if (dom.closedTrackArtist) dom.closedTrackArtist.textContent = current.artist;
   updatePlayStateUI();
 }
 
 function openSpatialArena() {
-  if (state.tracks.length === 0) return;
   state.isOpened = true;
-  dom.closedContainer.classList.add('hidden');
-  dom.openedContainer.classList.remove('hidden');
-  dom.btnDockClose.classList.remove('hidden');
-  renderSpatialCards();
+  showOpenedView();
 }
 
 function closeSpatialArena() {
   state.isOpened = false;
-  dom.openedContainer.classList.add('hidden');
-  dom.btnDockClose.classList.add('hidden');
-  dom.closedContainer.classList.remove('hidden');
-  renderClosedArtifact();
+  showClosedView();
 }
 
 /**
@@ -154,10 +168,46 @@ function closeSpatialArena() {
  * 3. OPENED STATE: ORGANIC FLOATING GLASS CARDS
  * ============================================================================
  */
-function renderSpatialCards() {
-  dom.spatialCardsField.innerHTML = '';
-  if (state.tracks.length === 0) return;
+function showOpenedView() {
+  if (dom.closedContainer) dom.closedContainer.classList.add('hidden');
+  if (dom.openedContainer) dom.openedContainer.classList.remove('hidden');
+  if (dom.btnDockClose) dom.btnDockClose.classList.remove('hidden');
+  if (dom.errorContainer) dom.errorContainer.classList.add('hidden');
+  renderSpatialCards();
+}
 
+function renderSpatialCards() {
+  if (!dom.spatialCardsField) return;
+  dom.spatialCardsField.innerHTML = '';
+
+  // If user has 0 scrobbles, display a clean guidance card in the opened spatial field
+  if (state.tracks.length === 0) {
+    const emptyCard = document.createElement('div');
+    emptyCard.className = 'glass-message-card';
+    emptyCard.style.position = 'relative';
+    emptyCard.innerHTML = `
+      <div class="message-icon-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="10 8 16 12 10 16 10 8"></polygon>
+        </svg>
+      </div>
+      <h2 class="message-title">Account Connected: ${state.currentUser}</h2>
+      <p class="message-desc">Your Last.fm account is verified and ready. Once you stream music on Spotify or Last.fm, your recent rotation will appear here automatically.</p>
+      <button class="message-btn" onclick="window.loadRecentTracks()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        <span>Refresh Scrobbles</span>
+      </button>
+    `;
+    dom.spatialCardsField.appendChild(emptyCard);
+    return;
+  }
+
+  // Render up to 6 tracks in spatial orbit
   state.tracks.slice(0, 6).forEach((track, index) => {
     const card = document.createElement('article');
     const isLiked = state.likedTrackIds.has(track.id);
@@ -169,7 +219,7 @@ function renderSpatialCards() {
     card.className = `glass-track-card drifting ${posClass} ${isActive ? 'is-active' : ''}`;
     card.dataset.index = index;
 
-    const coverArt = track.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+    const coverArt = track.image || DEFAULT_COVER;
 
     card.innerHTML = `
       <div class="card-artwork-wrap">
@@ -307,8 +357,8 @@ function handleTimelineScrub(e, index) {
 }
 
 function updatePlayStateUI() {
-  dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
-  dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
+  if (dom.triggerPlayIcon) dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
+  if (dom.triggerPauseIcon) dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
 
   document.querySelectorAll('.glass-track-card').forEach((card, idx) => {
     const playIcon = card.querySelector('.icon-play');
