@@ -2,20 +2,22 @@
  * ============================================================================
  * EXPRESS PROXY SERVER (backend/server.js)
  * ============================================================================
- * Architecture Rules:
- * 1. Strict Reverse Proxy: Frontend browser exclusively calls /api/recent-tracks.
- *    Zero requests to ws.audioscrobbler.com from the browser.
- * 2. API Key & Username Protection: Both LASTFM_API_KEY and LASTFM_USERNAME
- *    are kept safe on the server and loaded via process.env.
- * 3. In-Memory Caching (60s TTL): Reloading twice in a row fetches from RAM.
- *    Zero repeat calls to Last.fm.
+ * Key Rules:
+ * 1. Dotenv loaded at the very top, resolving both ./backend/.env and ../.env
+ * 2. Reverse proxy endpoint /api/recent-tracks
+ * 3. Default limit=15 and user from process.env.LASTFM_USERNAME
+ * 4. In-memory cache for successful responses (60s TTL)
+ * 5. Passes structured error messages cleanly to client without crashes
  */
 
-require('dotenv').config();
+const path = require('path');
+
+// Ensure dotenv is loaded properly at the very top from both local and root .env
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const cache = require('./cache');
 const { fetchRecentTracks } = require('./lastfmService');
 
@@ -41,14 +43,14 @@ app.use(express.static(frontendPath));
 
 /**
  * GET /api/recent-tracks
- * Proxies user.getrecenttracks for the configured LASTFM_USERNAME
+ * Proxies user.getrecenttracks for process.env.LASTFM_USERNAME (default limit: 15)
  */
 app.get('/api/recent-tracks', async (req, res) => {
   try {
-    const user = (req.query.user || process.env.LASTFM_USERNAME || '').trim().toLowerCase();
-    const limit = Math.min(Math.max(parseInt(req.query.limit || '6', 10), 1), 20);
+    const user = (req.query.user || process.env.LASTFM_USERNAME || '').trim();
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '15', 10), 1), 50);
 
-    const cacheKey = `recent-tracks:${user || 'default'}:${limit}`;
+    const cacheKey = `recent-tracks:${user.toLowerCase()}:${limit}`;
 
     // 1. Check in-memory cache
     const cached = cache.get(cacheKey);
@@ -65,14 +67,28 @@ app.get('/api/recent-tracks', async (req, res) => {
       });
     }
 
-    // 2. Cache miss: Fetch from Last.fm server-side
+    // 2. Cache miss: Fetch from Last.fm via server proxy
     console.log(`[CACHE MISS] Fetching fresh data from Last.fm API for user '${user}'...`);
     const freshData = await fetchRecentTracks(user, limit);
 
-    cache.set(cacheKey, freshData, CACHE_TTL);
+    // Only cache successful track lists (never cache errors)
+    if (!freshData.error && Array.isArray(freshData.tracks) && freshData.tracks.length > 0) {
+      cache.set(cacheKey, freshData, CACHE_TTL);
+    }
 
     res.setHeader('X-Cache', 'MISS');
     res.setHeader('X-Cache-TTL', CACHE_TTL);
+
+    // If Last.fm returned an error, return 502 with structured message
+    if (freshData.error) {
+      return res.status(freshData.statusCode || 502).json({
+        success: false,
+        error: true,
+        user: freshData.user,
+        message: freshData.message,
+        tracks: [],
+      });
+    }
 
     return res.json({
       ...freshData,
@@ -87,8 +103,9 @@ app.get('/api/recent-tracks', async (req, res) => {
     res.status(500).json({
       success: false,
       error: true,
-      message: 'Internal server error while proxying music data.',
+      message: 'Internal server proxy error.',
       details: error.message,
+      tracks: [],
     });
   }
 });

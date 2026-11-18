@@ -559,6 +559,85 @@ body.editorial-body {
   transform: scale(0.94);
 }
 
+/* ==========================================================================
+   ERROR & EMPTY STATE MESSAGING (Clean frosted card, no blank screen)
+   ========================================================================== */
+.error-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  animation: fadeIn 0.6s var(--ease-spring);
+  z-index: 60;
+}
+
+.glass-message-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--glass-card-bg-active);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-card-border-active);
+  border-radius: var(--radius-card);
+  box-shadow: var(--glass-shadow-active);
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.message-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dark);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.message-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: -0.01em;
+}
+
+.message-desc {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 340px;
+}
+
+.message-btn {
+  margin-top: 8px;
+  background: #ffffff;
+  color: var(--text-dark);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-editorial);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s var(--ease-spring);
+}
+
+.message-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
 /* Helpers */
 .hidden {
   display: none !important;

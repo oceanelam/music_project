@@ -4,10 +4,10 @@
  * ============================================================================
  * Architecture Rules:
  * 1. Strict Reverse Proxy: Browser calls ONLY /api/recent-tracks.
- *    Zero requests to ws.audioscrobbler.com.
+ *    Zero requests to ws.audioscrobbler.com from the browser.
  * 2. Caching: 60s in-memory cache handled transparently by the backend proxy.
- * 3. Minimalist Art Direction: No tech dashboard clutter, no status pills.
- *    Pure spatial glassmorphism, organic floating cards, and tactile interactions.
+ * 3. Graceful Resilience: When Last.fm fails, displays a clean error message
+ *    WITHOUT loading fake mock tracks, never leaving a blank screen.
  */
 
 const state = {
@@ -15,7 +15,7 @@ const state = {
   activeIndex: 0,
   isOpened: false,
   isPlaying: false,
-  progressSeconds: 45,
+  progressSeconds: 30,
   trackDuration: 210,
   likedTrackIds: new Set(),
   audioCtx: null,
@@ -36,11 +36,11 @@ const dom = {
   btnDockClose: document.getElementById('btn-dock-close'),
   watermarkUser: document.getElementById('watermark-user'),
 
-  fallbackBanner: document.getElementById('fallback-banner'),
-  fallbackText: document.getElementById('fallback-text'),
+  errorContainer: document.getElementById('error-container'),
+  errorTitle: document.getElementById('error-title'),
+  errorDesc: document.getElementById('error-desc'),
 };
 
-// Spatial layout presets for 6 cards (2 foreground heroes + 4 drifting background cards)
 const SPATIAL_POSITIONS = [
   'pos-fg-left',
   'pos-fg-right',
@@ -57,29 +57,64 @@ const SPATIAL_POSITIONS = [
  */
 async function loadRecentTracks() {
   try {
-    // Calls our local Node.js proxy endpoint exclusively
-    const response = await fetch('/api/recent-tracks?limit=6');
-    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
+    // Relative URL ensures call goes strictly through local backend proxy
+    const response = await fetch('/api/recent-tracks?limit=15');
     const data = await response.json();
-    state.tracks = data.tracks || [];
 
-    if (data.user && data.user !== 'You') {
+    if (!response.ok || data.error) {
+      showErrorMessage(
+        'Unable to load tracks from Last.fm',
+        data.message || `Proxy returned HTTP ${response.status}. Please check your credentials.`
+      );
+      return;
+    }
+
+    if (!Array.isArray(data.tracks) || data.tracks.length === 0) {
+      showErrorMessage(
+        'No Recent Scrobbles Found',
+        `User '${data.user || 'your account'}' has no recent tracks recorded on Last.fm yet. Start listening on Spotify or Last.fm to see your rotation here!`
+      );
+      return;
+    }
+
+    // Success: hide error state
+    dom.errorContainer.classList.add('hidden');
+
+    state.tracks = data.tracks;
+    if (data.user) {
       dom.watermarkUser.textContent = `LISTENING HISTORY • ${data.user.toUpperCase()}`;
     }
 
-    if (data.isFallback && data.warning) {
-      dom.fallbackText.textContent = data.warning;
-      dom.fallbackBanner.classList.remove('hidden');
+    if (state.isOpened) {
+      dom.openedContainer.classList.remove('hidden');
+      dom.closedContainer.classList.add('hidden');
+      renderSpatialCards();
+    } else {
+      dom.closedContainer.classList.remove('hidden');
+      dom.openedContainer.classList.add('hidden');
+      renderClosedArtifact();
     }
-
-    renderClosedArtifact();
-    renderSpatialCards();
   } catch (err) {
     console.error('Failed to load tracks through proxy:', err);
-    dom.fallbackText.textContent = 'Unable to connect to music proxy. Please ensure the backend is running.';
-    dom.fallbackBanner.classList.remove('hidden');
+    showErrorMessage(
+      'Connection Error',
+      'The backend proxy server is unreachable. Please ensure the backend is running with npm start or docker compose up.'
+    );
   }
+}
+
+/**
+ * Displays a clean error message in the center without loading fake mock songs
+ */
+function showErrorMessage(title, description) {
+  state.tracks = [];
+  dom.closedContainer.classList.add('hidden');
+  dom.openedContainer.classList.add('hidden');
+  dom.btnDockClose.classList.add('hidden');
+
+  dom.errorTitle.textContent = title;
+  dom.errorDesc.textContent = description;
+  dom.errorContainer.classList.remove('hidden');
 }
 
 /**
@@ -91,13 +126,14 @@ function renderClosedArtifact() {
   if (state.tracks.length === 0) return;
   const current = state.tracks[state.activeIndex] || state.tracks[0];
 
-  dom.closedCoverImg.src = current.image;
+  dom.closedCoverImg.src = current.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80';
   dom.closedTrackTitle.textContent = current.title;
   dom.closedTrackArtist.textContent = current.artist;
   updatePlayStateUI();
 }
 
 function openSpatialArena() {
+  if (state.tracks.length === 0) return;
   state.isOpened = true;
   dom.closedContainer.classList.add('hidden');
   dom.openedContainer.classList.remove('hidden');
@@ -122,38 +158,34 @@ function renderSpatialCards() {
   dom.spatialCardsField.innerHTML = '';
   if (state.tracks.length === 0) return;
 
-  state.tracks.forEach((track, index) => {
+  state.tracks.slice(0, 6).forEach((track, index) => {
     const card = document.createElement('article');
     const isLiked = state.likedTrackIds.has(track.id);
     const isActive = index === state.activeIndex;
 
-    // Determine spatial position relative to active card
     const positionIndex = (index - state.activeIndex + state.tracks.length) % state.tracks.length;
     const posClass = SPATIAL_POSITIONS[positionIndex] || 'pos-bg-far-right';
 
     card.className = `glass-track-card drifting ${posClass} ${isActive ? 'is-active' : ''}`;
     card.dataset.index = index;
 
+    const coverArt = track.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+
     card.innerHTML = `
-      <!-- Square Album Artwork -->
       <div class="card-artwork-wrap">
-        <img class="card-artwork-img" src="${track.image}" alt="${escapeHtml(track.title)}" loading="lazy" />
+        <img class="card-artwork-img" src="${coverArt}" alt="${escapeHtml(track.title)}" loading="lazy" />
       </div>
 
-      <!-- Minimal Track Details -->
       <div class="card-details">
         <h3 class="card-title" title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</h3>
         <p class="card-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</p>
       </div>
 
-      <!-- Hair-thin Progress Bar -->
       <div class="card-timeline" onclick="event.stopPropagation(); window.handleTimelineScrub(event, ${index});">
         <div class="card-timeline-fill" id="timeline-fill-${index}"></div>
       </div>
 
-      <!-- Minimal Controls Row -->
       <div class="card-minimal-ctrls">
-        <!-- Shuffle -->
         <button class="minimal-icon-btn" onclick="event.stopPropagation(); window.shuffleTracks();" title="Shuffle" aria-label="Shuffle">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <polyline points="16 3 21 3 21 8"></polyline>
@@ -164,7 +196,6 @@ function renderSpatialCards() {
           </svg>
         </button>
 
-        <!-- Previous -->
         <button class="minimal-icon-btn" onclick="event.stopPropagation(); window.prevTrack();" title="Previous" aria-label="Previous">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="19 20 9 12 19 4 19 20"></polygon>
@@ -172,7 +203,6 @@ function renderSpatialCards() {
           </svg>
         </button>
 
-        <!-- Round Solid White Play/Pause Button -->
         <button class="round-white-play-btn" onclick="event.stopPropagation(); window.toggleCardPlay(${index});" title="Play or Pause" aria-label="Play">
           <svg class="icon-play ${isActive && state.isPlaying ? 'hidden' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="6 4 20 12 6 20 6 4"></polygon>
@@ -183,7 +213,6 @@ function renderSpatialCards() {
           </svg>
         </button>
 
-        <!-- Next -->
         <button class="minimal-icon-btn" onclick="event.stopPropagation(); window.nextTrack();" title="Next" aria-label="Next">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 4 15 12 5 20 5 4"></polygon>
@@ -191,7 +220,6 @@ function renderSpatialCards() {
           </svg>
         </button>
 
-        <!-- Heart / Favorite -->
         <button class="minimal-icon-btn ${isLiked ? 'is-active-btn' : ''}" onclick="event.stopPropagation(); window.toggleLike('${track.id}');" title="Favorite" aria-label="Favorite">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -200,9 +228,7 @@ function renderSpatialCards() {
       </div>
     `;
 
-    // Clicking any card brings it into active focus
     card.onclick = () => selectTrack(index);
-
     dom.spatialCardsField.appendChild(card);
   });
 
@@ -246,16 +272,19 @@ function toggleCardPlay(index) {
 }
 
 function nextTrack() {
+  if (state.tracks.length === 0) return;
   const next = (state.activeIndex + 1) % state.tracks.length;
   selectTrack(next);
 }
 
 function prevTrack() {
+  if (state.tracks.length === 0) return;
   const prev = (state.activeIndex - 1 + state.tracks.length) % state.tracks.length;
   selectTrack(prev);
 }
 
 function shuffleTracks() {
+  if (state.tracks.length === 0) return;
   const rand = Math.floor(Math.random() * state.tracks.length);
   selectTrack(rand);
 }
@@ -278,11 +307,9 @@ function handleTimelineScrub(e, index) {
 }
 
 function updatePlayStateUI() {
-  // Update closed player icon
   dom.triggerPlayIcon.classList.toggle('hidden', state.isPlaying);
   dom.triggerPauseIcon.classList.toggle('hidden', !state.isPlaying);
 
-  // Update cards
   document.querySelectorAll('.glass-track-card').forEach((card, idx) => {
     const playIcon = card.querySelector('.icon-play');
     const pauseIcon = card.querySelector('.icon-pause');
@@ -304,7 +331,6 @@ function updateTimelineDisplays() {
   if (fillEl) fillEl.style.width = `${pct}%`;
 }
 
-// Gentle ambient synth pad for live tactile feedback
 function startGentleSynth() {
   try {
     if (!state.audioCtx) {
@@ -350,7 +376,6 @@ function stopGentleSynth() {
   }
 }
 
-// Playback timer
 setInterval(() => {
   if (state.isPlaying) {
     state.progressSeconds = (state.progressSeconds + 1) % state.trackDuration;
@@ -358,7 +383,6 @@ setInterval(() => {
   }
 }, 1000);
 
-// Keyboard controls
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
@@ -385,6 +409,7 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+window.loadRecentTracks = loadRecentTracks;
 window.openSpatialArena = openSpatialArena;
 window.closeSpatialArena = closeSpatialArena;
 window.toggleCardPlay = toggleCardPlay;

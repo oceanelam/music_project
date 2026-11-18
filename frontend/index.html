@@ -82,11 +82,27 @@
     </section>
 
     <!-- ================================================================= -->
-    <!-- 2. OPENED STATE: Organic Floating Frosted-Glass Cards             -->
+    <!-- 3. ERROR / FALLBACK STATE (Clean message, no blank screen, no mocks)-->
     <!-- ================================================================= -->
-    <section class="opened-state-container hidden" id="opened-container">
-      <div class="organic-spatial-field" id="spatial-cards-field">
-        <!-- Dynamic frosted-glass cards injected here by app.js -->
+    <section class="error-state-container hidden" id="error-container">
+      <div class="glass-message-card">
+        <div class="message-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h2 class="message-title" id="error-title">Unable to load tracks</h2>
+        <p class="message-desc" id="error-desc">Last.fm is currently unreachable.</p>
+        <button class="message-btn" id="btn-retry" onclick="window.loadRecentTracks()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span>Retry Connection</span>
+        </button>
       </div>
     </section>
 

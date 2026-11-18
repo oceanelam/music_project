@@ -2,75 +2,20 @@
  * ============================================================================
  * LAST.FM PROXY SERVICE (backend/lastfmService.js)
  * ============================================================================
- * Purpose:
- * 1. Architecture & Security: Keeps LASTFM_API_KEY and LASTFM_USERNAME safe on server.
- *    The browser NEVER contacts ws.audioscrobbler.com directly.
- * 2. Caching & Resilience: Works hand-in-hand with backend/cache.js (60s TTL).
- * 3. Graceful Fallbacks: If offline or if user/key not yet set, provides
- *    high-resolution fallback tracks so the editorial UI displays seamlessly.
+ * Rules:
+ * 1. Request URL: https://ws.audioscrobbler.com/2.0/ with:
+ *    - method=user.getrecenttracks
+ *    - user=(trimmed process.env.LASTFM_USERNAME)
+ *    - api_key=(trimmed process.env.LASTFM_API_KEY)
+ *    - limit=15
+ *    - format=json
+ * 2. Security: Logs sanitized URL with api_key=***MASKED***
+ * 3. Exact Error Logging: Prints HTTP status and response body to console
+ * 4. Zero Fake Tracks: If Last.fm is unreachable or fails, returns clean error
+ *    state without injecting fake mock songs.
  */
 
 const LASTFM_BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
-
-/**
- * Editorial fallback tracks (used if offline or before .env is configured)
- */
-const FALLBACK_TRACKS = [
-  {
-    id: 'track-1',
-    title: 'Starboy',
-    artist: 'The Weeknd, Daft Punk',
-    album: 'Starboy',
-    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: true,
-    url: 'https://www.last.fm/music/The+Weeknd/_/Starboy',
-  },
-  {
-    id: 'track-2',
-    title: 'Midnight City',
-    artist: 'M83',
-    album: 'Hurry Up, We\'re Dreaming',
-    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: false,
-    url: 'https://www.last.fm/music/M83/_/Midnight+City',
-  },
-  {
-    id: 'track-3',
-    title: 'Instant Crush',
-    artist: 'Daft Punk, Julian Casablancas',
-    album: 'Random Access Memories',
-    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: false,
-    url: 'https://www.last.fm/music/Daft+Punk/_/Instant+Crush',
-  },
-  {
-    id: 'track-4',
-    title: 'Nightcall',
-    artist: 'Kavinsky',
-    album: 'OutRun',
-    image: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: false,
-    url: 'https://www.last.fm/music/Kavinsky/_/Nightcall',
-  },
-  {
-    id: 'track-5',
-    title: 'Resonance',
-    artist: 'HOME',
-    album: 'Odyssey',
-    image: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: false,
-    url: 'https://www.last.fm/music/HOME/_/Resonance',
-  },
-  {
-    id: 'track-6',
-    title: 'Get Lucky',
-    artist: 'Daft Punk, Pharrell Williams',
-    album: 'Random Access Memories',
-    image: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=700&auto=format&fit=crop&q=80',
-    nowPlaying: false,
-    url: 'https://www.last.fm/music/Daft+Punk/_/Get+Lucky',
-  },
-];
 
 /**
  * Extracts the best cover art URL from Last.fm's image array
@@ -89,80 +34,111 @@ function extractBestImage(imageArray) {
 }
 
 /**
- * Fetch recent tracks from Last.fm API for the configured user
- * @param {string} username - Target Last.fm username from process.env.LASTFM_USERNAME
- * @param {number} limit - Number of tracks (default 6)
+ * Fetch recent tracks from Last.fm API
+ * @param {string} [username] - Optional override, defaults to process.env.LASTFM_USERNAME
+ * @param {number} [limit=15] - Number of tracks to retrieve (default 15)
  */
-async function fetchRecentTracks(username, limit = 6) {
+async function fetchRecentTracks(username, limit = 15) {
   const apiKey = (process.env.LASTFM_API_KEY || '').trim();
   const targetUser = (username || process.env.LASTFM_USERNAME || '').trim();
 
-  // Guard: Ensure user and API key are configured in .env
+  // Validate presence of credentials
   if (!targetUser || targetUser === 'YOUR_LASTFM_USERNAME') {
-    console.warn('[NOTICE] LASTFM_USERNAME not configured in .env. Showing editorial preview tracks.');
+    const msg = 'LASTFM_USERNAME is missing or unconfigured in .env';
+    console.error(`[CONFIG ERROR] ${msg}`);
     return {
-      success: true,
-      user: 'You',
-      isFallback: true,
-      warning: 'Please set your LASTFM_USERNAME in your .env file to load your personal music history.',
-      tracks: FALLBACK_TRACKS.slice(0, limit),
-      totalTracks: FALLBACK_TRACKS.length,
+      success: false,
+      error: true,
+      user: null,
+      message: msg,
+      tracks: [],
     };
   }
 
   if (!apiKey || apiKey === 'YOUR_LASTFM_API_KEY') {
-    console.warn('[NOTICE] LASTFM_API_KEY not configured in .env. Showing editorial preview tracks.');
+    const msg = 'LASTFM_API_KEY is missing or unconfigured in .env';
+    console.error(`[CONFIG ERROR] ${msg}`);
     return {
-      success: true,
+      success: false,
+      error: true,
       user: targetUser,
-      isFallback: true,
-      warning: 'Please set your LASTFM_API_KEY in your .env file.',
-      tracks: FALLBACK_TRACKS.slice(0, limit),
-      totalTracks: FALLBACK_TRACKS.length,
+      message: msg,
+      tracks: [],
     };
   }
 
-  // Construct Last.fm endpoint URL
+  // Construct query parameters
   const params = new URLSearchParams({
     method: 'user.getrecenttracks',
     user: targetUser,
     api_key: apiKey,
-    format: 'json',
     limit: String(limit),
+    format: 'json',
   });
 
-  const targetUrl = `${LASTFM_BASE_URL}?${params.toString()}`;
-  console.log(`[OUTBOUND PROXY] Fetching Last.fm recent tracks for user '${targetUser}'...`);
+  const fullUrl = `${LASTFM_BASE_URL}?${params.toString()}`;
+
+  // Rule 3: Log sanitized request URL with api_key masked
+  const sanitizedUrl = `${LASTFM_BASE_URL}?method=user.getrecenttracks&user=${encodeURIComponent(targetUser)}&api_key=***MASKED***&limit=${limit}&format=json`;
+  console.log(`[LAST.FM REQUEST] Querying: ${sanitizedUrl}`);
 
   try {
-    // 6-second timeout using native AbortSignal
-    const response = await fetch(targetUrl, {
+    const response = await fetch(fullUrl, {
       signal: AbortSignal.timeout(6000),
       headers: {
-        'User-Agent': 'EditorialMusicProxy/2.0.0',
+        'User-Agent': 'EditorialMusicProxy/2.1.0',
       },
     });
 
+    const responseText = await response.text();
+
+    // Rule 3: If HTTP error, log exact error response body
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`[LAST.FM ERROR] Status ${response.status}: ${errorBody}`);
-      throw new Error(`Last.fm API returned HTTP ${response.status}`);
+      console.error(`[LAST.FM ERROR] HTTP ${response.status} from ${sanitizedUrl}`);
+      console.error(`[LAST.FM ERROR BODY] ${responseText}`);
+      return {
+        success: false,
+        error: true,
+        statusCode: response.status,
+        user: targetUser,
+        message: `Last.fm API returned HTTP ${response.status} for user '${targetUser}'. Response: ${responseText}`,
+        tracks: [],
+      };
     }
 
-    const json = await response.json();
+    let json;
+    try {
+      json = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.error('[LAST.FM PARSE ERROR] Non-JSON response body:', responseText);
+      return {
+        success: false,
+        error: true,
+        user: targetUser,
+        message: 'Invalid JSON received from Last.fm API.',
+        tracks: [],
+      };
+    }
 
+    // Check for Last.fm application-level logical error
     if (json.error) {
-      console.warn(`[LAST.FM LOGICAL ERROR] Code ${json.error}: ${json.message}`);
-      throw new Error(`Last.fm: ${json.message || 'Unknown API error'}`);
+      console.error(`[LAST.FM LOGICAL ERROR] Code ${json.error}: ${json.message}`);
+      return {
+        success: false,
+        error: true,
+        errorCode: json.error,
+        user: targetUser,
+        message: `Last.fm error (${json.error}): ${json.message}`,
+        tracks: [],
+      };
     }
 
     const rawTracks = json.recenttracks?.track || [];
-    const trackList = Array.isArray(rawTracks) ? rawTracks : [rawTracks];
+    const trackList = Array.isArray(rawTracks) ? rawTracks : (rawTracks ? [rawTracks] : []);
 
     const normalizedTracks = trackList.map((t, index) => {
       const isNowPlaying = t['@attr'] && t['@attr'].nowplaying === 'true';
-      const rawImage = extractBestImage(t.image);
-      const image = rawImage || FALLBACK_TRACKS[index % FALLBACK_TRACKS.length].image;
+      const image = extractBestImage(t.image) || '';
 
       return {
         id: `track-${index}-${(t.name || '').replace(/\s+/g, '-').toLowerCase()}`,
@@ -175,27 +151,28 @@ async function fetchRecentTracks(username, limit = 6) {
       };
     });
 
+    console.log(`[LAST.FM SUCCESS] Retrieved ${normalizedTracks.length} tracks for user '${targetUser}'`);
+
     return {
       success: true,
+      error: false,
       user: json.recenttracks?.['@attr']?.user || targetUser,
-      isFallback: false,
       totalTracks: parseInt(json.recenttracks?.['@attr']?.total || String(normalizedTracks.length), 10),
       tracks: normalizedTracks,
     };
   } catch (err) {
-    console.error(`[EXCEPTION] Error fetching from Last.fm: ${err.message}`);
+    console.error(`[NETWORK/TIMEOUT ERROR] Failed to reach Last.fm: ${err.message}`);
+    // Rule 4: Clean error state without fake mock tracks
     return {
-      success: true,
+      success: false,
+      error: true,
       user: targetUser,
-      isFallback: true,
-      warning: `Unable to reach Last.fm (${err.message}). Showing editorial fallback tracks.`,
-      tracks: FALLBACK_TRACKS.slice(0, limit),
-      totalTracks: FALLBACK_TRACKS.length,
+      message: `Last.fm is unreachable (${err.message}). Please check your internet connection or server proxy.`,
+      tracks: [],
     };
   }
 }
 
 module.exports = {
   fetchRecentTracks,
-  FALLBACK_TRACKS,
 };
