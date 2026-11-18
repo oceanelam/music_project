@@ -200,39 +200,39 @@
         <!-- Bottom Half: Tactile Click-Wheel -->
         <div class="retro-clickwheel" id="retro-clickwheel">
           <!-- Top Menu Button: Enters player -->
-          <span class="wheel-label wheel-top pulse-menu" onclick="event.stopPropagation(); window.openSpatialArena();" title="Click MENU to enter player">MENU</span>
+          <button type="button" class="wheel-label wheel-top pulse-menu" id="wheel-menu-btn" onclick="event.stopPropagation(); window.openSpatialArena();" title="Click MENU to enter player">MENU</button>
 
           <!-- Left Prev Button: Switches previous track on LCD only (e.stopPropagation()) -->
-          <button class="wheel-icon wheel-left" onclick="window.closedPrev(event);" title="Previous Track on LCD" aria-label="Previous Track">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <button type="button" class="wheel-icon wheel-left" id="wheel-prev-btn" onclick="window.closedPrev(event);" title="Previous Track on LCD" aria-label="Previous Track">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="19 20 9 12 19 4 19 20"></polygon>
               <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5"></line>
             </svg>
           </button>
 
           <!-- Right Next Button: Switches next track on LCD only (e.stopPropagation()) -->
-          <button class="wheel-icon wheel-right" onclick="window.closedNext(event);" title="Next Track on LCD" aria-label="Next Track">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <button type="button" class="wheel-icon wheel-right" id="wheel-next-btn" onclick="window.closedNext(event);" title="Next Track on LCD" aria-label="Next Track">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 4 15 12 5 20 5 4"></polygon>
               <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5"></line>
             </svg>
           </button>
 
           <!-- Bottom Play/Pause Button: Toggles playback on LCD only (e.stopPropagation()) -->
-          <button class="wheel-icon wheel-bottom" onclick="window.closedTogglePlay(event);" title="Play or Pause on LCD" aria-label="Play or Pause">
-            <svg id="trigger-play-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <button type="button" class="wheel-icon wheel-bottom" id="wheel-play-btn" onclick="window.closedTogglePlay(event);" title="Play or Pause on LCD" aria-label="Play or Pause">
+            <svg id="trigger-play-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            <svg id="trigger-pause-icon" class="hidden" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <svg id="trigger-pause-icon" class="hidden" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="4" width="4" height="16"></rect>
               <rect x="14" y="4" width="4" height="16"></rect>
             </svg>
           </button>
 
           <!-- Center Tactile Circular Button: Enters player -->
-          <div class="wheel-center-button" onclick="event.stopPropagation(); window.openSpatialArena();" title="Enter player">
+          <button type="button" class="wheel-center-button" id="wheel-center-btn" onclick="event.stopPropagation(); window.openSpatialArena();" title="Enter player" aria-label="Enter player">
             <div class="wheel-center-core"></div>
-          </div>
+          </button>
         </div>
 
         <!-- Cute Personal Touch: Dangling Y2K Silver Star Charm -->
@@ -261,12 +261,6 @@
         <!-- Subtle headphone jack port on top edge -->
         <div class="device-jack-port"></div>
         <div class="device-hold-switch"></div>
-      </div>
-
-      <!-- Clean Interactive Entry Prompt below MP3 Player -->
-      <div class="enter-device-prompt" onclick="window.openSpatialArena()" title="Click to enter player">
-        <span class="prompt-pulse-dot"></span>
-        <span class="prompt-text">Press MENU to enter player</span>
       </div>
     </section>
 

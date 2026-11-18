@@ -568,6 +568,7 @@ body.editorial-body::before {
   border-radius: 2px 2px 0 0;
   background: #2b2e35;
   border: 1px solid #9aa0aa;
+  pointer-events: none;
 }
 
 .device-hold-switch {
@@ -579,6 +580,7 @@ body.editorial-body::before {
   border-radius: 2px 2px 0 0;
   background: linear-gradient(to right, #cfd3d8, #a8aeb7);
   border: 1px solid #7c828d;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -780,11 +782,10 @@ body.editorial-body::before {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.07),
               inset 0 1.5px 2px #ffffff,
               inset 0 -1.5px 3px rgba(0, 0, 0, 0.07);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-top: 10px;
   transition: all 0.25s var(--ease-spring);
+  pointer-events: auto;
+  user-select: none;
 }
 
 .retro-mp3-device:hover .retro-clickwheel {
@@ -792,27 +793,42 @@ body.editorial-body::before {
               inset 0 1.5px 2px #ffffff;
 }
 
+/* MENU button (Top) with large hit area */
 .wheel-label {
   position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: #7b818d;
+  background: transparent;
+  border: none;
   cursor: pointer;
+  pointer-events: auto;
   user-select: none;
-  z-index: 10;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: color 0.2s ease, transform 0.2s ease;
+  z-index: 30;
+  border-radius: 8px;
+  padding: 0;
+  margin: 0;
+  transition: color 0.2s ease, transform 0.2s ease, text-shadow 0.2s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.wheel-top {
-  top: 11px;
+.wheel-top:hover {
+  transform: translateX(-50%) scale(1.12);
 }
 
-.wheel-label:hover {
-  transform: scale(1.1);
+.wheel-top:active {
+  transform: translateX(-50%) scale(0.95);
 }
 
 /* Inviting glowing pulse on MENU */
@@ -831,46 +847,94 @@ body.editorial-body::before {
   }
 }
 
+/* Tactile Click-Wheel Buttons (Left, Right, Bottom) */
 .wheel-icon {
   position: absolute;
   color: #7b818d;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
   outline: none;
-  padding: 8px;
+  pointer-events: auto;
+  z-index: 30;
   border-radius: 50%;
+  padding: 0;
+  margin: 0;
   transition: color 0.18s ease, transform 0.18s ease;
-  z-index: 10;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wheel-icon svg {
+  pointer-events: none;
 }
 
 .wheel-icon:hover {
   color: #1e293b;
-  transform: scale(1.22);
 }
 
-.wheel-icon:active {
-  transform: scale(0.92);
-}
-
+/* Left (Previous |<<) Button: Large 46px touch target vertically centered */
 .wheel-left {
-  left: 12px;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
 }
 
+.wheel-left:hover {
+  transform: translateY(-50%) scale(1.2);
+}
+
+.wheel-left:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+/* Right (Next >>|) Button: Large 46px touch target vertically centered */
 .wheel-right {
-  right: 12px;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
 }
 
+.wheel-right:hover {
+  transform: translateY(-50%) scale(1.2);
+}
+
+.wheel-right:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+/* Bottom (Play/Pause) Button: Large 46px touch target */
 .wheel-bottom {
-  bottom: 10px;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 46px;
+  height: 40px;
 }
 
+.wheel-bottom:hover {
+  transform: translateX(-50%) scale(1.18);
+}
+
+.wheel-bottom:active {
+  transform: translateX(-50%) scale(0.92);
+}
+
+/* Center Tactile Circular Button */
 .wheel-center-button {
-  width: 62px;
-  height: 62px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ffffff 0%, #e2e5eb 100%);
   border: 1px solid rgba(255, 255, 255, 1);
@@ -882,15 +946,19 @@ body.editorial-body::before {
   justify-content: center;
   transition: transform 0.2s var(--ease-spring);
   cursor: pointer;
-  z-index: 10;
+  pointer-events: auto;
+  z-index: 15;
+  padding: 0;
+  margin: 0;
+  outline: none;
 }
 
 .wheel-center-button:hover {
-  transform: scale(1.08);
+  transform: translate(-50%, -50%) scale(1.06);
 }
 
 .wheel-center-button:active {
-  transform: scale(0.94);
+  transform: translate(-50%, -50%) scale(0.95);
 }
 
 .wheel-center-core {
@@ -899,10 +967,7 @@ body.editorial-body::before {
   border-radius: 50%;
   background: radial-gradient(circle, #e4e6ea 0%, #cbd0d8 100%);
   border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-.retro-mp3-device:hover .wheel-center-button {
-  transform: scale(1.06);
+  pointer-events: none;
 }
 
 /* Y2K Silver Star Charm */
@@ -958,55 +1023,6 @@ body.editorial-body::before {
   }
   100% {
     transform: rotate(-3deg);
-  }
-}
-
-/* Interactive Entry Prompt Below Closed Player */
-.enter-device-prompt {
-  margin-top: 22px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius-pill);
-  padding: 8px 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-editorial);
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-dark);
-  cursor: pointer;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
-  transition: all 0.25s var(--ease-spring);
-  user-select: none;
-}
-
-.enter-device-prompt:hover {
-  background: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-}
-
-.prompt-pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #3b82f6;
-  box-shadow: 0 0 8px #3b82f6;
-  animation: pulseDot 2s infinite ease-in-out;
-}
-
-@keyframes pulseDot {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.45;
-    transform: scale(0.85);
   }
 }
 

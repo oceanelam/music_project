@@ -174,6 +174,54 @@ function closedTogglePlay(e) {
   renderClosedArtifact();
 }
 
+function initClickWheelControls() {
+  const prevBtn = document.getElementById('wheel-prev-btn');
+  const nextBtn = document.getElementById('wheel-next-btn');
+  const playBtn = document.getElementById('wheel-play-btn');
+  const menuBtn = document.getElementById('wheel-menu-btn');
+  const centerBtn = document.getElementById('wheel-center-btn');
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      closedPrev(e);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      closedNext(e);
+    });
+  }
+
+  if (playBtn) {
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      closedTogglePlay(e);
+    });
+  }
+
+  if (menuBtn) {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      openSpatialArena();
+    });
+  }
+
+  if (centerBtn) {
+    centerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      openSpatialArena();
+    });
+  }
+}
+
 function openSpatialArena() {
   if (state.isOpened) return;
   state.isOpened = true;
@@ -807,6 +855,7 @@ window.toggleLike = toggleLike;
 window.handleTimelineScrub = handleTimelineScrub;
 
 window.addEventListener('DOMContentLoaded', () => {
+  initClickWheelControls();
   setupGestureControls();
   loadRecentTracks();
 });
