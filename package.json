@@ -1,0 +1,9 @@
+{
+  "name": "music-project-root",
+  "version": "1.0.0",
+  "description": "Spatial MP3 Player with Last.fm Proxy & Cache",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js"
+  }
+}

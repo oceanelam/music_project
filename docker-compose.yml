@@ -10,7 +10,7 @@ services:
     environment:
       - PORT=5000
       - LASTFM_API_KEY=${LASTFM_API_KEY}
-      - LASTFM_DEFAULT_USER=${LASTFM_DEFAULT_USER:-rj}
+      - LASTFM_USERNAME=${LASTFM_USERNAME}
       - CACHE_TTL_SECONDS=${CACHE_TTL_SECONDS:-60}
     restart: unless-stopped
 
